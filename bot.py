@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 def calculate_indicators(df):
-    # 1. RSI Calculation
+    # 1. RSI (14)
     close_delta = df['Close'].diff()
     up = close_delta.clip(lower=0)
     down = -1 * close_delta.clip(upper=0)
@@ -16,19 +16,19 @@ def calculate_indicators(df):
     ma_down = down.ewm(com=13, adjust=False).mean()
     df['RSI'] = 100 - (100 / (1 + (ma_up / ma_down)))
     
-    # 2. MACD Calculation
+    # 2. MACD (12, 26, 9)
     df['EMA12'] = df['Close'].ewm(span=12, adjust=False).mean()
     df['EMA26'] = df['Close'].ewm(span=26, adjust=False).mean()
     df['MACD'] = df['EMA12'] - df['EMA26']
     df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
     
-    # 3. Bollinger Bands
+    # 3. Bollinger Bands (20, 2)
     df['BB_Mid'] = df['Close'].rolling(window=20).mean()
     df['BB_Std'] = df['Close'].rolling(window=20).std()
     df['BB_Upper'] = df['BB_Mid'] + (df['BB_Std'] * 2)
     df['BB_Lower'] = df['BB_Mid'] - (df['BB_Std'] * 2)
     
-    # 4. Exponential Moving Averages (Multi-Timeframe Confluence)
+    # 4. Moving Averages for Swing Trend Filtration
     df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
     df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
     return df
@@ -36,17 +36,12 @@ def calculate_indicators(df):
 @app.route('/analyze')
 def analyze_coin():
     raw_coin = request.args.get('coin', 'BTCUSDT').upper().strip()
-    
-    # Standardizing token symbol for Binance API
     clean_coin = raw_coin.replace('-', '').replace('/', '')
     if not clean_coin.endswith('USDT'):
         clean_coin += 'USDT'
 
-    # Fetching live 1H data from Binance Public API (Tries Spot first, then Futures)
     data = None
-    intervals = ["1h", "4h", "1d"]
-    
-    # Target endpoint array for maximum reliability
+    # Connect directly to Binance API with the corrected status_code logic
     endpoints = [
         f"https://api.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
         f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_coin}&interval=1h&limit=200"
@@ -54,8 +49,8 @@ def analyze_coin():
     
     for url in endpoints:
         try:
-            res = requests.get(url, timeout=5)
-            if res.status_style == 200:
+            res = requests.get(url, timeout=7)
+            if res.status_code == 200: # FIXED: Changed from status_style to status_code
                 data = res.json()
                 if data and isinstance(data, list):
                     break
@@ -63,17 +58,15 @@ def analyze_coin():
             continue
 
     if not data or 'code' in str(data):
-        return jsonify({"error": f"Symbol {raw_coin} not found on Binance database."}), 404
+        return jsonify({"error": f"Token symbol '{raw_coin}' not recognized globally."}), 404
 
     try:
-        # Parsing Binance Klines data structure
         df = pd.DataFrame(data, columns=[
             'Open_time', 'Open', 'High', 'Low', 'Close', 'Volume',
             'Close_time', 'Quote_asset_volume', 'Number_of_trades',
             'Taker_buy_base_asset_volume', 'Taker_buy_quote_asset_volume', 'Ignore'
         ])
         
-        # Casting types to float for mathematical correctness
         df['Close'] = df['Close'].astype(float)
         df['High'] = df['High'].astype(float)
         df['Low'] = df['Low'].astype(float)
@@ -82,67 +75,65 @@ def analyze_coin():
         
         price = round(df['Close'].iloc[-1], 6)
         rsi = round(df['RSI'].iloc[-1], 2)
-        macd = round(df['MACD'].iloc[-1], 6)
-        macd_signal = round(df['Signal_Line'].iloc[-1], 6)
-        bb_upper = round(df['BB_Upper'].iloc[-1], 6)
-        bb_lower = round(df['BB_Lower'].iloc[-1], 6)
+        macd = df['MACD'].iloc[-1]
+        macd_signal = df['Signal_Line'].iloc[-1]
         ema50 = df['EMA50'].iloc[-1]
         ema200 = df['EMA200'].iloc[-1]
 
-        # Heavy Multi-Indicator Analysis
-        bullish_score = 0
-        bearish_score = 0
+        # Multi-Indicator Confluence Evaluation Engine
+        bullish_signals = 0
+        bearish_signals = 0
         
-        if price > ema50: bullish_score += 1
-        else: bearish_score += 1
+        if price > ema50: bullish_signals += 1
+        else: bearish_signals += 1
         
-        if price > ema200: bullish_score += 1
-        else: bearish_score += 1
+        if price > ema200: bullish_signals += 1
+        else: bearish_signals += 1
         
-        if macd > macd_signal: bullish_score += 1
-        else: bearish_score += 1
-        
-        if rsi > 50: bullish_score += 1
-        elif rsi < 50: bearish_score += 1
+        if macd > macd_signal: bullish_signals += 1
+        else: bearish_signals += 1
 
-        # Strict Safe Strategy Formula (Always produces dynamic target parameters)
-        if bullish_score >= bearish_score:
-            side = "BUY LIMIT (LONG)"
-            status = "STRONG_BULLISH" if bullish_score >= 3 else "WEAK_BULLISH"
-            entry_low = round(price * 0.982, 5)
-            entry_high = round(price * 0.995, 5)
-            tp1 = round(price * 1.035, 5)
-            tp2 = round(price * 1.075, 5)
-            tp3 = round(price * 1.140, 5)
-            sl = round(entry_low * 0.950, 5)
-            alert = "ALL INDICATORS ALIGNED: Heavy structural support confirmed. Order safely inside the lower pull-back entry zone for swing goals."
+        # Strict Multi-Day Swing Trade Routing Math
+        # Option A: Strong Long Confirmations (Holding 1-7 Days)
+        if bullish_signals >= 3 and (42 <= rsi <= 68):
+            side = "BUY / LONG SETUP"
+            status = "STRONG_BULLISH"
+            entry_zone = f"{round(price * 0.985, 5)} - {round(price * 0.998, 5)}"
+            tp1 = round(price * 1.05, 5)  # 5% Gain Target
+            tp2 = round(price * 1.10, 5)  # 10% Gain Target
+            tp3 = round(price * 1.18, 5)  # 18% Gain Target
+            sl = round(price * 0.94, 5)   # 6% Protective Stop Loss
+            alert = "PRO CRITERIA MATCHED: Structural 1-7 Days Swing Long activated. Safe parameters set for small accounts."
+            
+        # Option B: Strong Short Confirmations (Holding 1-7 Days)
+        elif bearish_signals >= 3 and (32 <= rsi <= 58):
+            side = "SELL / SHORT SETUP"
+            status = "STRONG_BEARISH"
+            entry_zone = f"{round(price * 1.002, 5)} - {round(price * 1.015, 5)}"
+            tp1 = round(price * 0.95, 5)  # 5% Short Profit
+            tp2 = round(price * 0.90, 5)  # 10% Short Profit
+            tp3 = round(price * 0.82, 5)  # 18% Short Profit
+            sl = round(price * 1.06, 5)   # 6% Short Risk Stop
+            alert = "PRO CRITERIA MATCHED: Macro distribution confirms a clear multi-day Short window."
+            
+        # Option C: Volatile, Exhausted or Risky Market Phase -> DO NOT ENTER
         else:
-            side = "SELL LIMIT (SHORT)"
-            status = "STRONG_BEARISH" if bearish_score >= 3 else "WEAK_BEARISH"
-            entry_low = round(price * 1.005, 5)
-            entry_high = round(price * 1.018, 5)
-            tp1 = round(price * 0.965, 5)
-            tp2 = round(price * 0.925, 5)
-            tp3 = round(price * 0.860, 5)
-            sl = round(entry_high * 1.045, 5)
-            alert = "BEARISH WAVE DETECTED: Multiple exponential moving averages crossing downwards. Short positions activated inside the entry ceiling."
-
-        # Anti-Trap Protocol for Exhausted Over-extended Trends
-        if rsi > 76 and "BUY" in side:
-            status = "EXHAUSTED"
-            alert = "LATE ENTRY RISK: Market is extremely Overbought (RSI > 75). Buying right now is dangerous. Wait for a severe correction."
-        elif rsi < 24 and "SELL" in side:
-            status = "EXHAUSTED"
-            alert = "LATE DUMP RISK: Market is heavily Oversold (RSI < 25). The massive dump has already happened. Avoid shorting late."
-
-        entry_zone = f"{entry_low} - {entry_high}"
+            side = "DO NOT ENTER NOW"
+            status = "RISKY_WAIT"
+            entry_zone = "STAY OUT / NO SETUP"
+            tp1, tp2, tp3, sl = "N/A", "N/A", "N/A", "N/A"
+            if rsi > 70:
+                alert = "DO NOT ENTER: Asset is massively Overbought (RSI > 70). Entering now will trap your small wallet at the top."
+            elif rsi < 30:
+                alert = "DO NOT ENTER: Asset is deeply Oversold (RSI < 30). Late dumping risk is extreme. Wait for a recovery pattern."
+            else:
+                alert = "DO NOT ENTER: Consolidation / Choppy price action detected. Trend has no direction. Protect capital and wait."
 
         return jsonify({
             "coin": clean_coin, "price": price, "signal": side, "status": status,
-            "entry_zone": entry_zone, "leverage": "3x - 5x (Small Wallet Safety)",
+            "entry_zone": entry_zone, "leverage": "2x - 3x (Strict Small Wallet Rule)",
             "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl, "rsi": rsi,
-            "macd": "BULLISH CROSS" if macd > macd_signal else "BEARISH CROSS",
-            "bb_position": "UPPER CHANNEL" if price > ((bb_upper+bb_lower)/2) else "LOWER CHANNEL",
+            "macd": "BULLISH" if macd > macd_signal else "BEARISH",
             "alert": alert
         })
     except Exception as e:
