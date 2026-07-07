@@ -1,20 +1,30 @@
-import ccxt
+from flask import Flask, jsonify
+import threading
 import time
+import ccxt
 
-# Public Data විතරක් ගන්න නිසා Keys ඕනේ නැහැ
+app = Flask(__name__)
 exchange = ccxt.binance()
+current_signals = []
 
-def scan():
-    print("Scanning market...")
-    try:
-        # BTC සහ ETH වගේ ජනප්‍රිය කොයින්ස් ටිකක් බලමු
-        symbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
-        for s in symbols:
-            ticker = exchange.fetch_ticker(s)
-            print(f"{s}: {ticker['last']}")
-    except Exception as e:
-        print(f"Error: {e}")
+@app.route('/signals')
+def get_signals():
+    return jsonify(current_signals)
 
-while True:
-    scan()
-    time.sleep(60) # විනාඩියකට සැරයක් වැඩ කරනවා
+def run_bot():
+    global current_signals
+    while True:
+        try:
+            # සිග්නල් එකක් හදනවා
+            ticker = exchange.fetch_ticker('BTC/USDT')
+            price = ticker['last']
+            current_signals = [{"coin": "BTC/USDT", "price": price, "signal": "BUY"}]
+            print("Signals updated")
+        except Exception as e:
+            print(f"Error: {e}")
+        
+        time.sleep(60)
+
+if __name__ == '__main__':
+    threading.Thread(target=run_bot, daemon=True).start()
+    app.run(host='0.0.0.0', port=8080)
