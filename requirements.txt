@@ -1,4 +1,4 @@
-flask
-flask-cors
-ccxt
+Flask
+Flask-Cors
+yfinance
 pandas
