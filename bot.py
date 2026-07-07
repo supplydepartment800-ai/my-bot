@@ -1,50 +1,71 @@
+import os
 from flask import Flask, jsonify
 from flask_cors import CORS
-import ccxt, threading, time
+import yfinance as yf
+import threading
+import time
 
 app = Flask(__name__)
 CORS(app)
 signals = []
 
-def analyze():
+def analyze_market():
     global signals
-    exchange = ccxt.binance({'options': {'defaultType': 'future'}})
+    # ස්කෑන් කරන ප්‍රධාන Future Coins ලැයිස්තුව
+    coin_map = {
+        "BTC-USD": "BTC/USDT",
+        "ETH-USD": "ETH/USDT",
+        "SOL-USD": "SOL/USDT",
+        "XRP-USD": "XRP/USDT",
+        "BNB-USD": "BNB/USDT",
+        "DOGE-USD": "DOGE/USDT",
+        "ADA-USD": "ADA/USDT"
+    }
+    
     while True:
         try:
-            markets = exchange.load_markets()
-            # Futures වලින් මුල් කොයින් 15 ස්කෑන් කරනවා
-            symbols = [s for s in markets if '/USDT' in s][:15] 
             temp = []
-            for s in symbols:
-                ticker = exchange.fetch_ticker(s)
-                price = ticker['last']
-                change = ticker['change'] if ticker['change'] else 0
+            for yf_symbol, display_name in coin_map.items():
+                ticker = yf.Ticker(yf_symbol)
+                hist = ticker.history(period="1d")
                 
-                # මිල වෙනස අනුව Buy/Sell තීරණය කිරීම
-                side = "BUY" if change > 0 else "SELL"
-                
-                # TP සහ SL ගණනය කිරීම
-                if side == "BUY":
-                    tp1, tp2, tp3 = round(price * 1.01, 4), round(price * 1.02, 4), round(price * 1.03, 4)
-                    sl = round(price * 0.98, 4)
-                else:
-                    tp1, tp2, tp3 = round(price * 0.99, 4), round(price * 0.98, 4), round(price * 0.97, 4)
-                    sl = round(price * 1.02, 4)
-                
-                temp.append({
-                    "coin": s, "price": price, "signal": side,
-                    "entry": price, "leverage": "10x",
-                    "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl
-                })
+                if not hist.empty:
+                    price = round(hist['Close'].iloc[-1], 4)
+                    open_p = hist['Open'].iloc[-1]
+                    
+                    # මිල උඩ යනවා නම් BUY, පල්ලෙහාට නම් SELL
+                    side = "BUY" if price >= open_p else "SELL"
+                    
+                    # TP සහ SL නිවැරදිව ගණනය කිරීම
+                    if side == "BUY":
+                        tp1 = round(price * 1.01, 2) if price > 10 else round(price * 1.01, 4)
+                        tp2 = round(price * 1.02, 2) if price > 10 else round(price * 1.02, 4)
+                        tp3 = round(price * 1.03, 2) if price > 10 else round(price * 1.03, 4)
+                        sl = round(price * 0.98, 2) if price > 10 else round(price * 0.98, 4)
+                    else:
+                        tp1 = round(price * 0.99, 2) if price > 10 else round(price * 0.99, 4)
+                        tp2 = round(price * 0.98, 2) if price > 10 else round(price * 0.98, 4)
+                        tp3 = round(price * 0.97, 2) if price > 10 else round(price * 0.97, 4)
+                        sl = round(price * 1.02, 2) if price > 10 else round(price * 1.02, 4)
+                    
+                    temp.append({
+                        "coin": display_name, "price": price, "signal": side,
+                        "entry": price, "leverage": "10x",
+                        "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl
+                    })
             signals = temp
+            print("Signals updated successfully!")
         except Exception as e:
-            pass
-        time.sleep(30)
+            print(f"Error: {e}")
+        time.sleep(15) # තත්පර 15කින් නැවත අලුත් වේ
 
-threading.Thread(target=analyze, daemon=True).start()
+threading.Thread(target=analyze_market, daemon=True).start()
 
 @app.route('/signals')
-def get_signals(): return jsonify(signals)
+def get_signals():
+    return jsonify(signals)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    # Railway එකට අවශ්‍ය Port එක ලබා ගැනීම
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
