@@ -1,5 +1,4 @@
-ccxt
-pandas
 flask
-yfinance
+flask-cors
+ccxt
 pandas
