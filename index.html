@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus AI Premium Terminal</title>
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        /* CSS Variables for Dynamic Theme Switching */
+        :root {
+            --bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --panel: rgba(255, 255, 255, 0.8);
+            --border: rgba(255, 255, 255, 0.6);
+            --text: #0f172a;
+            --text-sub: #475569;
+            --primary: #2563eb;
+            --box-bg: rgba(255, 255, 255, 0.6);
+        }
+        [data-theme="dark"] {
+            --bg: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            --panel: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.05);
+            --text: #f8fafc;
+            --text-sub: #94a3b8;
+            --primary: #3b82f6;
+            --box-bg: rgba(15, 23, 42, 0.6);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; padding: 0;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
+        }
+
+        /* 📱 Emulating Strict 9:16 Mobile View Container */
+        .phone-wrapper {
+            width: 100%; max-width: 420px; height: 100vh;
+            max-height: 900px; box-sizing: border-box;
+            padding: 12px; display: flex; flex-direction: column; gap: 8px;
+            position: relative;
+        }
+
+        /* 🎬 Premium Animated Splash Screen */
+        #splash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999;
+            transition: opacity 0.6s ease, transform 0.6s ease; border-radius: 12px;
+        }
+        .splash-title {
+            font-size: 26px; font-weight: 900; letter-spacing: 3px;
+            background: linear-gradient(45deg, #3b82f6, #60a5fa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            opacity: 0; transform: scale(0.8);
+            animation: popIn 1s forwards cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+
+        /* Top Bar & Theme Toggle */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .logo-txt { font-weight: 800; font-size: 16px; letter-spacing: 1px; color: var(--primary); }
+        .theme-btn { 
+            background: var(--panel); border: 1px solid var(--border); 
+            padding: 6px 12px; border-radius: 20px; color: var(--text);
+            font-size: 11px; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px);
+        }
+
+        /* Search Section */
+        .search-box { display: flex; gap: 6px; }
+        input {
+            flex: 1; padding: 12px; background: var(--panel);
+            border: 1px solid var(--border); color: var(--text);
+            border-radius: 12px; font-size: 14px; text-transform: uppercase;
+            backdrop-filter: blur(10px);
+        }
+        button {
+            padding: 12px 16px; background: var(--primary);
+            border: none; color: white; font-weight: bold;
+            border-radius: 12px; cursor: pointer; font-size: 13px;
+        }
+
+        /* Chart Wrapper */
+        #chart { 
+            height: 38% !important; width: 100%; border-radius: 14px; 
+            overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /* Signals Panel */
+        .panel {
+            background: var(--panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 14px; border-radius: 16px; border: 1px solid var(--border);
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+
+        .header-row { display: flex; justify-content: space-between; align-items: center; }
+        .coin-name { font-size: 18px; font-weight: 800; }
+        .badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; letter-spacing: 0.5px; }
+        
+        .BULLISH { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .BEARISH { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        .NEUTRAL, .EXHAUSTED { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        [data-theme="dark"] .NEUTRAL, [data-theme="dark"] .EXHAUSTED { background: #334155; color: #f1f5f9; border: 1px solid #475569; }
+
+        .alert-card {
+            background: var(--box-bg); padding: 10px; border-radius: 10px;
+            font-size: 12px; line-height: 1.4; border-left: 4px solid var(--primary);
+        }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .grid-item { background: var(--box-bg); padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+        .lbl { font-size: 10px; color: var(--text-sub); font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+        .val { font-size: 13px; font-weight: 700; font-family: monospace; }
+        .green-txt { color: #10b981; }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <div class="phone-wrapper">
+        <div id="splash">
+            <div class="splash-title">NEXUS AI SIGNAL</div>
+        </div>
+
+        <div class="top-bar">
+            <div class="logo-txt">NEXUS AI v2.0</div>
+            <button class="theme-btn" onclick="toggleTheme()">SWITCH THEME</button>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="coinInput" value="BTCUSDT" placeholder="ENTER COIN (E.G. SOLUSDT)">
+            <button onclick="loadCoin()">ANALYZE</button>
+        </div>
+
+        <div id="chart"></div>
+
+        <div class="panel" id="signalPanel">
+            <div style="text-align: center; color: var(--text-sub); padding-top: 30px;">Initializing System Engine...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentCoin = "BTCUSDT";
+        let currentTheme = "dark";
+        const api_base_url = 'https://worker-production-c4493.up.railway.app/analyze';
+
+        // ⏳ Splash screen removal
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash');
+                if(splash) {
+                    splash.style.opacity = '0';
+                    setTimeout(() => splash.remove(), 600);
+                }
+            }, 1800);
+        });
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', currentTheme);
+            loadTradingView(currentCoin); // Reload chart with new theme configuration
+        }
+
+        function loadTradingView(coin) {
+            document.getElementById('chart').innerHTML = ""; // Reset chart container
+            new TradingView.widget({
+                "container_id": "chart",
+                "autosize": true,
+                "symbol": "BINANCE:" + coin,
+                "interval": "60",
+                "theme": currentTheme,
+                "style": "1",
+                "enable_publishing": false,
+                "hide_side_toolbar": true,
+                "allow_symbol_change": true
+            });
+        }
+
+        async function fetchSignalData() {
+            try {
+                const response = await fetch(`${api_base_url}?coin=${currentCoin}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('signalPanel').innerHTML = `<div style="color:#ef4444; font-weight:bold; text-align:center; padding:20px;">Symbol Error: Not supported.</div>`;
+                    return;
+                }
+
+                let badgeClass = data.status;
+
+                document.getElementById('signalPanel').innerHTML = `
+                    <div class="header-row">
+                        <div>
+                            <div class="coin-name">${data.coin}</div>
+                            <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">Live: ${data.price} USDT</div>
+                        </div>
+                        <span class="badge ${badgeClass}">${data.signal}</span>
+                    </div>
+
+                    <div class="alert-card" style="border-left-color: ${badgeClass==='BULLISH'?'#10b981':badgeClass==='BEARISH'?'#ef4444':'#64748b'}">
+                        <b>AI INSIGHT:</b> ${data.alert}
+                    </div>
+
+                    <div class="grid">
+                        <div class="grid-item"><div class="lbl">🎯 Entry Zone</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
+                        <div class="grid-item"><div class="lbl">🛡️ Leverage</div><div class="val">${data.leverage}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 1 (TP1)</div><div class="val green-txt">${data.tp1}</div></div>
+                        <div class="grid-item"><div class="lbl">🛑 Stop Loss (SL)</div><div class="val" style="color:#ef4444;">${data.sl}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 2 (TP2)</div><div class="val green-txt">${data.tp2}</div></div>
+                        <div class="grid-item"><div class="lbl">📊 RSI Momentum</div><div class="val" style="color:#0284c7;">${data.rsi}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 3 (TP3)</div><div class="val green-txt">${data.tp3}</div></div>
+                        <div class="grid-item"><div class="lbl">🔀 Macro Direction</div><div class="val">${data.macro_trend}</div></div>
+                    </div>
+                `;
+            } catch (err) {
+                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Reconnecting to Nexus Core Architecture...</div>`;
+            }
+        }
+
+        function loadCoin() {
+            let value = document.getElementById('coinInput').value.trim().toUpperCase();
+            if(!value) return;
+            if(!value.endsWith("USDT") && !value.includes("-")) value += "USDT";
+            currentCoin = value;
+            loadTradingView(currentCoin);
+            fetchSignalData();
+        }
+
+        // Bootstrapping Terminal
+        loadTradingView(currentCoin);
+        fetchSignalData();
+        setInterval(fetchSignalData, 12000); // Efficient background syncing every 12 seconds
+    </script>
+</body>
+</html>
