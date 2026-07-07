@@ -1,141 +1,100 @@
 import os
-import requests
 import pandas as pd
+import yfinance as yf
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-def calculate_indicators(df):
-    # 1. RSI (14)
+def calculate_rsi(df, periods=14):
     close_delta = df['Close'].diff()
     up = close_delta.clip(lower=0)
     down = -1 * close_delta.clip(upper=0)
-    ma_up = up.ewm(com=13, adjust=False).mean()
-    ma_down = down.ewm(com=13, adjust=False).mean()
-    df['RSI'] = 100 - (100 / (1 + (ma_up / ma_down)))
-    
-    # 2. MACD (12, 26, 9)
-    df['EMA12'] = df['Close'].ewm(span=12, adjust=False).mean()
-    df['EMA26'] = df['Close'].ewm(span=26, adjust=False).mean()
-    df['MACD'] = df['EMA12'] - df['EMA26']
-    df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
-    
-    # 3. Bollinger Bands
-    df['BB_Mid'] = df['Close'].rolling(window=20).mean()
-    df['BB_Std'] = df['Close'].rolling(window=20).std()
-    df['BB_Upper'] = df['BB_Mid'] + (df['BB_Std'] * 2)
-    df['BB_Lower'] = df['BB_Mid'] - (df['BB_Std'] * 2)
-    
-    # 4. Moving Averages for Swing Filtration
-    df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
-    df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
-    return df
+    ma_up = up.ewm(com=periods - 1, adjust=False).mean()
+    ma_down = down.ewm(com=periods - 1, adjust=False).mean()
+    rsi = ma_up / ma_down
+    return 100 - (100 / (1 + rsi))
 
 @app.route('/analyze')
 def analyze_coin():
-    raw_coin = request.args.get('coin', 'BTCUSDT').upper().strip()
-    clean_coin = raw_coin.replace('-', '').replace('/', '')
-    if not clean_coin.endswith('USDT'):
-        clean_coin += 'USDT'
-
-    # Real-browser headers to bypass cloud hosting firewall blocks
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
-    data = None
-    # 5 Global Binance Mirrors Array to defeat 403/451 errors
-    endpoints = [
-        f"https://api.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
-        f"https://api1.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
-        f"https://api2.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
-        f"https://api3.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
-        f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_coin}&interval=1h&limit=200"
-    ]
-    
-    for url in endpoints:
-        try:
-            res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200:
-                data = res.json()
-                if data and isinstance(data, list):
-                    break
-        except:
-            continue
-
-    if not data or 'code' in str(data):
-        return jsonify({"error": f"Token symbol '{raw_coin}' not recognized globally."}), 404
+    coin = request.args.get('coin', 'BTCUSDT').upper().strip()
+    base_coin = coin.replace('USDT', '')
+    yf_symbol = f"{base_coin}-USD"
 
     try:
-        df = pd.DataFrame(data, columns=[
-            'Open_time', 'Open', 'High', 'Low', 'Close', 'Volume',
-            'Close_time', 'Quote_asset_volume', 'Number_of_trades',
-            'Taker_buy_base_asset_volume', 'Taker_buy_quote_asset_volume', 'Ignore'
-        ])
+        ticker = yf.Ticker(yf_symbol)
+        # Fetching 1H history to analyze short, medium and macro trends together
+        hist = ticker.history(period="1mo", interval="1h")
         
-        df['Close'] = df['Close'].astype(float)
-        df['High'] = df['High'].astype(float)
-        df['Low'] = df['Low'].astype(float)
+        if hist.empty or len(hist) < 200:
+            hist = ticker.history(period="3mo", interval="1d")
+            
+        if hist.empty:
+            return jsonify({"error": "Coin not found globally"}), 404
 
-        df = calculate_indicators(df)
+        price = round(hist['Close'].iloc[-1], 4)
         
-        price = round(df['Close'].iloc[-1], 6)
-        rsi = round(df['RSI'].iloc[-1], 2)
-        macd = df['MACD'].iloc[-1]
-        macd_signal = df['Signal_Line'].iloc[-1]
-        ema50 = df['EMA50'].iloc[-1]
-        ema200 = df['EMA200'].iloc[-1]
+        # Multi-Timeframe Technical Metrics
+        hist['RSI'] = calculate_rsi(hist)
+        current_rsi = round(hist['RSI'].iloc[-1], 2)
+        
+        hist['SMA50'] = hist['Close'].rolling(window=50).mean()   # Intermediate Trend (4H equivalence)
+        hist['SMA200'] = hist['Close'].rolling(window=200).mean() # Macro Trend (1D equivalence)
+        
+        sma50 = hist['SMA50'].iloc[-1]
+        sma200 = hist['SMA200'].iloc[-1]
 
-        bullish_signals = 0
-        bearish_signals = 0
-        
-        if price > ema50: bullish_signals += 1
-        else: bearish_signals += 1
-        
-        if price > ema200: bullish_signals += 1
-        else: bearish_signals += 1
-        
-        if macd > macd_signal: bullish_signals += 1
-        else: bearish_signals += 1
+        # Initialization
+        side = "WAIT / NO SIGNAL"
+        entry_zone = "No Trade Zone"
+        tp1, tp2, tp3, sl = 0, 0, 0, 0
+        alert = "Market is consolidating. Waiting for verified multi-timeframe confirmation."
+        status = "NEUTRAL"
 
-        # Pro Strategy Logic (1-7 Days Hold)
-        if bullish_signals >= 3 and (42 <= rsi <= 68):
-            side = "BUY / LONG SETUP"
-            status = "STRONG_BULLISH"
-            entry_zone = f"{round(price * 0.985, 5)} - {round(price * 0.998, 5)}"
-            tp1 = round(price * 1.05, 5)
-            tp2 = round(price * 1.10, 5)
-            tp3 = round(price * 1.18, 5)
-            sl = round(price * 0.94, 5)
-            alert = "PRO CRITERIA MATCHED: Structural 1-7 Days Swing Long activated. Safe parameters set for small accounts."
-        elif bearish_signals >= 3 and (32 <= rsi <= 58):
-            side = "SELL / SHORT SETUP"
-            status = "STRONG_BEARISH"
-            entry_zone = f"{round(price * 1.002, 5)} - {round(price * 1.015, 5)}"
-            tp1 = round(price * 0.95, 5)
-            tp2 = round(price * 0.90, 5)
-            tp3 = round(price * 0.82, 5)
-            sl = round(price * 1.06, 5)
-            alert = "PRO CRITERIA MATCHED: Macro distribution confirms a clear multi-day Short window."
-        else:
-            side = "DO NOT ENTER NOW"
-            status = "RISKY_WAIT"
-            entry_zone = "STAY OUT / NO SETUP"
-            tp1, tp2, tp3, sl = "N/A", "N/A", "N/A", "N/A"
-            if rsi > 70:
-                alert = "DO NOT ENTER: Asset is massively Overbought (RSI > 70). Entering now will trap your small wallet at the top."
-            elif rsi < 30:
-                alert = "DO NOT ENTER: Asset is deeply Oversold (RSI < 30). Late dumping risk is extreme. Wait for a recovery pattern."
-            else:
-                alert = "DO NOT ENTER: Consolidation / Choppy price action detected. Trend has no direction. Protect capital and wait."
+        # 🚨 ANTI-LATE ENTRY & LATE DUMP DETECTION LOGIC
+        if price < sma50 and current_rsi < 28:
+            # Price is down, but RSI shows it already dumped too much. Do not enter late!
+            side = "WAIT / DO NOT ENTER"
+            status = "EXHAUSTED"
+            alert = "WARNING: The dump is already completed! Selling now is extremely risky. Trend exhaustion detected."
+        
+        elif price > sma50 and current_rsi > 72:
+            # Price is up, but RSI shows it already pumped too much. Do not enter late!
+            side = "WAIT / DO NOT ENTER"
+            status = "EXHAUSTED"
+            alert = "WARNING: The pump is already completed! Buying now is dangerous. Overbought exhaustion detected."
+
+        # Verified Trends for Safe Entries
+        elif price > sma50 and price > sma200 and (40 <= current_rsi <= 68):
+            side = "BUY LIMIT (LONG)"
+            status = "BULLISH"
+            entry_low = round(price * 0.988, 4)
+            entry_high = round(price * 0.998, 4)
+            entry_zone = f"{entry_low} - {entry_high}"
+            tp1 = round(price * 1.03, 4)
+            tp2 = round(price * 1.07, 4)
+            tp3 = round(price * 1.15, 4)
+            sl = round(entry_low * 0.95, 4)
+            alert = "STRONG CONFLUENCE: 1H, 4H & 1D trends are aligned upwards. Place orders inside the entry zone for a safe swing ride."
+
+        elif price < sma50 and price < sma200 and (32 <= current_rsi <= 60):
+            side = "SELL LIMIT (SHORT)"
+            status = "BEARISH"
+            entry_low = round(price * 1.002, 4)
+            entry_high = round(price * 1.012, 4)
+            entry_zone = f"{entry_low} - {entry_high}"
+            tp1 = round(price * 0.97, 4)
+            tp2 = round(price * 0.93, 4)
+            tp3 = round(price * 0.85, 4)
+            sl = round(entry_high * 1.05, 4)
+            alert = "STRONG CONFLUENCE: Macro and micro trends are crashing down. Perfect entry window for safe shorting."
 
         return jsonify({
-            "coin": clean_coin, "price": price, "signal": side, "status": status,
-            "entry_zone": entry_zone, "leverage": "2x - 3x (Strict Small Wallet Rule)",
-            "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl, "rsi": rsi,
-            "macd": "BULLISH" if macd > macd_signal else "BEARISH",
+            "coin": coin, "price": price, "signal": side, "status": status,
+            "entry_zone": entry_zone, "leverage": "3x - 5x (Swing Recommended)",
+            "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl,
+            "rsi": current_rsi, "macro_trend": "UPTREND" if price > sma200 else "DOWNTREND",
             "alert": alert
         })
     except Exception as e:
