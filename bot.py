@@ -22,13 +22,13 @@ def calculate_indicators(df):
     df['MACD'] = df['EMA12'] - df['EMA26']
     df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
     
-    # 3. Bollinger Bands (20, 2)
+    # 3. Bollinger Bands
     df['BB_Mid'] = df['Close'].rolling(window=20).mean()
     df['BB_Std'] = df['Close'].rolling(window=20).std()
     df['BB_Upper'] = df['BB_Mid'] + (df['BB_Std'] * 2)
     df['BB_Lower'] = df['BB_Mid'] - (df['BB_Std'] * 2)
     
-    # 4. Moving Averages for Swing Trend Filtration
+    # 4. Moving Averages for Swing Filtration
     df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
     df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
     return df
@@ -40,17 +40,25 @@ def analyze_coin():
     if not clean_coin.endswith('USDT'):
         clean_coin += 'USDT'
 
+    # Real-browser headers to bypass cloud hosting firewall blocks
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
     data = None
-    # Connect directly to Binance API with the corrected status_code logic
+    # 5 Global Binance Mirrors Array to defeat 403/451 errors
     endpoints = [
         f"https://api.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
+        f"https://api1.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
+        f"https://api2.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
+        f"https://api3.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
         f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_coin}&interval=1h&limit=200"
     ]
     
     for url in endpoints:
         try:
-            res = requests.get(url, timeout=7)
-            if res.status_code == 200: # FIXED: Changed from status_style to status_code
+            res = requests.get(url, headers=headers, timeout=5)
+            if res.status_code == 200:
                 data = res.json()
                 if data and isinstance(data, list):
                     break
@@ -80,7 +88,6 @@ def analyze_coin():
         ema50 = df['EMA50'].iloc[-1]
         ema200 = df['EMA200'].iloc[-1]
 
-        # Multi-Indicator Confluence Evaluation Engine
         bullish_signals = 0
         bearish_signals = 0
         
@@ -93,30 +100,25 @@ def analyze_coin():
         if macd > macd_signal: bullish_signals += 1
         else: bearish_signals += 1
 
-        # Strict Multi-Day Swing Trade Routing Math
-        # Option A: Strong Long Confirmations (Holding 1-7 Days)
+        # Pro Strategy Logic (1-7 Days Hold)
         if bullish_signals >= 3 and (42 <= rsi <= 68):
             side = "BUY / LONG SETUP"
             status = "STRONG_BULLISH"
             entry_zone = f"{round(price * 0.985, 5)} - {round(price * 0.998, 5)}"
-            tp1 = round(price * 1.05, 5)  # 5% Gain Target
-            tp2 = round(price * 1.10, 5)  # 10% Gain Target
-            tp3 = round(price * 1.18, 5)  # 18% Gain Target
-            sl = round(price * 0.94, 5)   # 6% Protective Stop Loss
+            tp1 = round(price * 1.05, 5)
+            tp2 = round(price * 1.10, 5)
+            tp3 = round(price * 1.18, 5)
+            sl = round(price * 0.94, 5)
             alert = "PRO CRITERIA MATCHED: Structural 1-7 Days Swing Long activated. Safe parameters set for small accounts."
-            
-        # Option B: Strong Short Confirmations (Holding 1-7 Days)
         elif bearish_signals >= 3 and (32 <= rsi <= 58):
             side = "SELL / SHORT SETUP"
             status = "STRONG_BEARISH"
             entry_zone = f"{round(price * 1.002, 5)} - {round(price * 1.015, 5)}"
-            tp1 = round(price * 0.95, 5)  # 5% Short Profit
-            tp2 = round(price * 0.90, 5)  # 10% Short Profit
-            tp3 = round(price * 0.82, 5)  # 18% Short Profit
-            sl = round(price * 1.06, 5)   # 6% Short Risk Stop
+            tp1 = round(price * 0.95, 5)
+            tp2 = round(price * 0.90, 5)
+            tp3 = round(price * 0.82, 5)
+            sl = round(price * 1.06, 5)
             alert = "PRO CRITERIA MATCHED: Macro distribution confirms a clear multi-day Short window."
-            
-        # Option C: Volatile, Exhausted or Risky Market Phase -> DO NOT ENTER
         else:
             side = "DO NOT ENTER NOW"
             status = "RISKY_WAIT"
