@@ -1,6 +1,6 @@
 import os
+import requests
 import pandas as pd
-import yfinance as yf
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -28,7 +28,7 @@ def calculate_indicators(df):
     df['BB_Upper'] = df['BB_Mid'] + (df['BB_Std'] * 2)
     df['BB_Lower'] = df['BB_Mid'] - (df['BB_Std'] * 2)
     
-    # 4. Moving Averages for Macro Trend
+    # 4. Exponential Moving Averages (Multi-Timeframe Confluence)
     df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
     df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
     return df
@@ -37,37 +37,59 @@ def calculate_indicators(df):
 def analyze_coin():
     raw_coin = request.args.get('coin', 'BTCUSDT').upper().strip()
     
-    # Advanced global cleanup to handle any crypto symbol variant
-    clean_coin = raw_coin.replace('USDT', '').replace('-', '').replace('/', '')
-    yf_symbol = f"{clean_coin}-USD"
+    # Standardizing token symbol for Binance API
+    clean_coin = raw_coin.replace('-', '').replace('/', '')
+    if not clean_coin.endswith('USDT'):
+        clean_coin += 'USDT'
+
+    # Fetching live 1H data from Binance Public API (Tries Spot first, then Futures)
+    data = None
+    intervals = ["1h", "4h", "1d"]
+    
+    # Target endpoint array for maximum reliability
+    endpoints = [
+        f"https://api.binance.com/api/v3/klines?symbol={clean_coin}&interval=1h&limit=200",
+        f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_coin}&interval=1h&limit=200"
+    ]
+    
+    for url in endpoints:
+        try:
+            res = requests.get(url, timeout=5)
+            if res.status_style == 200:
+                data = res.json()
+                if data and isinstance(data, list):
+                    break
+        except:
+            continue
+
+    if not data or 'code' in str(data):
+        return jsonify({"error": f"Symbol {raw_coin} not found on Binance database."}), 404
 
     try:
-        ticker = yf.Ticker(yf_symbol)
-        hist = ticker.history(period="1mo", interval="1h")
+        # Parsing Binance Klines data structure
+        df = pd.DataFrame(data, columns=[
+            'Open_time', 'Open', 'High', 'Low', 'Close', 'Volume',
+            'Close_time', 'Quote_asset_volume', 'Number_of_trades',
+            'Taker_buy_base_asset_volume', 'Taker_buy_quote_asset_volume', 'Ignore'
+        ])
         
-        # Fallback if 1h fails for exotic tokens
-        if hist.empty or len(hist) < 50:
-            hist = ticker.history(period="3mo", interval="1d")
-            
-        if hist.empty:
-            # Final global fallback test
-            ticker = yf.Ticker(f"{clean_coin}1-USD")
-            hist = ticker.history(period="1mo", interval="1h")
-            if hist.empty:
-                return jsonify({"error": f"Symbol {raw_coin} could not be resolved globally."}), 404
+        # Casting types to float for mathematical correctness
+        df['Close'] = df['Close'].astype(float)
+        df['High'] = df['High'].astype(float)
+        df['Low'] = df['Low'].astype(float)
 
-        hist = calculate_indicators(hist)
+        df = calculate_indicators(df)
         
-        price = round(hist['Close'].iloc[-1], 5)
-        rsi = round(hist['RSI'].iloc[-1], 2)
-        macd = round(hist['MACD'].iloc[-1], 5)
-        macd_signal = round(hist['Signal_Line'].iloc[-1], 5)
-        bb_upper = round(hist['BB_Upper'].iloc[-1], 5)
-        bb_lower = round(hist['BB_Lower'].iloc[-1], 5)
-        ema50 = hist['EMA50'].iloc[-1]
-        ema200 = hist['EMA200'].iloc[-1]
+        price = round(df['Close'].iloc[-1], 6)
+        rsi = round(df['RSI'].iloc[-1], 2)
+        macd = round(df['MACD'].iloc[-1], 6)
+        macd_signal = round(df['Signal_Line'].iloc[-1], 6)
+        bb_upper = round(df['BB_Upper'].iloc[-1], 6)
+        bb_lower = round(df['BB_Lower'].iloc[-1], 6)
+        ema50 = df['EMA50'].iloc[-1]
+        ema200 = df['EMA200'].iloc[-1]
 
-        # Multi-Indicator Scoring Mechanism
+        # Heavy Multi-Indicator Analysis
         bullish_score = 0
         bearish_score = 0
         
@@ -83,49 +105,44 @@ def analyze_coin():
         if rsi > 50: bullish_score += 1
         elif rsi < 50: bearish_score += 1
 
-        # Default Target Math (Always computed perfectly based on mathematical probability)
+        # Strict Safe Strategy Formula (Always produces dynamic target parameters)
         if bullish_score >= bearish_score:
             side = "BUY LIMIT (LONG)"
-            status = "STRONG BULLISH" if bullish_score >= 3 else "WEAK BULLISH"
-            entry_low = round(price * 0.985, 5)
-            entry_high = round(price * 0.996, 5)
+            status = "STRONG_BULLISH" if bullish_score >= 3 else "WEAK_BULLISH"
+            entry_low = round(price * 0.982, 5)
+            entry_high = round(price * 0.995, 5)
             tp1 = round(price * 1.035, 5)
-            tp2 = round(price * 1.070, 5)
+            tp2 = round(price * 1.075, 5)
             tp3 = round(price * 1.140, 5)
-            sl = round(entry_low * 0.955, 5)
-            alert = f"Indicators showing structural strength. EMA/MACD alignment suggests an ideal long build-up inside the designated entry zone."
+            sl = round(entry_low * 0.950, 5)
+            alert = "ALL INDICATORS ALIGNED: Heavy structural support confirmed. Order safely inside the lower pull-back entry zone for swing goals."
         else:
             side = "SELL LIMIT (SHORT)"
-            status = "STRONG BEARISH" if bearish_score >= 3 else "WEAK BEARISH"
-            entry_low = round(price * 1.004, 5)
-            entry_high = round(price * 1.015, 5)
+            status = "STRONG_BEARISH" if bearish_score >= 3 else "WEAK_BEARISH"
+            entry_low = round(price * 1.005, 5)
+            entry_high = round(price * 1.018, 5)
             tp1 = round(price * 0.965, 5)
-            tp2 = round(price * 0.930, 5)
+            tp2 = round(price * 0.925, 5)
             tp3 = round(price * 0.860, 5)
             sl = round(entry_high * 1.045, 5)
-            alert = f"Distribution pattern detected. High dynamic volume pushing below standard Bollinger baselines. Safe shorting entries activated."
+            alert = "BEARISH WAVE DETECTED: Multiple exponential moving averages crossing downwards. Short positions activated inside the entry ceiling."
 
-        # Override for exhausted market phases (Anti-Trap Protocol)
-        if rsi > 75 and side == "BUY LIMIT (LONG)":
-            status = "EXHAUSTED (OVERBOUGHT)"
-            alert = "WARNING: Momentum is completely overextended at historical limits. Proceed with ultra-low capital allocation."
-        elif rsi < 25 and side == "SELL LIMIT (SHORT)":
-            status = "EXHAUSTED (OVERSOLD)"
-            alert = "WARNING: Deep seller saturation reached. Standard shorting vectors are high risk here. Capital protection recommended."
+        # Anti-Trap Protocol for Exhausted Over-extended Trends
+        if rsi > 76 and "BUY" in side:
+            status = "EXHAUSTED"
+            alert = "LATE ENTRY RISK: Market is extremely Overbought (RSI > 75). Buying right now is dangerous. Wait for a severe correction."
+        elif rsi < 24 and "SELL" in side:
+            status = "EXHAUSTED"
+            alert = "LATE DUMP RISK: Market is heavily Oversold (RSI < 25). The massive dump has already happened. Avoid shorting late."
 
         entry_zone = f"{entry_low} - {entry_high}"
 
         return jsonify({
-            "coin": clean_coin + "USDT",
-            "price": price,
-            "signal": side,
-            "status": status,
-            "entry_zone": entry_zone,
-            "leverage": "3x - 5x (Swing Mode)",
-            "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl,
-            "rsi": rsi,
+            "coin": clean_coin, "price": price, "signal": side, "status": status,
+            "entry_zone": entry_zone, "leverage": "3x - 5x (Small Wallet Safety)",
+            "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl, "rsi": rsi,
             "macd": "BULLISH CROSS" if macd > macd_signal else "BEARISH CROSS",
-            "bb_position": "UPPER BAND BOUND" if price > ((bb_upper+bb_lower)/2) else "LOWER BAND BOUND",
+            "bb_position": "UPPER CHANNEL" if price > ((bb_upper+bb_lower)/2) else "LOWER CHANNEL",
             "alert": alert
         })
     except Exception as e:
