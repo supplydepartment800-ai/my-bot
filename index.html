@@ -88,6 +88,8 @@
         let currentCoin = "TACUSDT.P";
         let currentMode = "FUTURE";
         let isDark = false;
+        
+        // ⚠️ මෙතනට ඔයාගේ HTTPS සහිත නිවැරදි Railway URL එක දාන්න
         const api_base_url = 'https://worker-production-c4493.up.railway.app';
 
         function toggleTheme() {
@@ -133,7 +135,7 @@
         async function fetchAnalysisData() {
             try {
                 document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Analyzing Chart Matrix...</div>`;
-                const res = await fetch(`${api_base_url}/analyze?coin=${currentCoin.toUpperCase().trim()}&mode=${currentMode}`);
+                const res = await fetch(`${api_base_url}/analyze?coin=${encodeURIComponent(currentCoin)}&mode=${currentMode}`);
                 const data = await res.json();
 
                 let isBull = data.status === 'BULLISH';
@@ -168,12 +170,7 @@
             try {
                 document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Scanning Future Markets...</div>`;
                 
-                // CORS බ්ලොක් වීම් මඟ හැරීමට ආරක්ෂිතව Fetch කිරීම
-                const res = await fetch(`${api_base_url}/top-signals`, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const res = await fetch(`${api_base_url}/top-signals`);
                 const data = await res.json();
 
                 let htmlContent = `<div class="fade-in" style="display:flex; flex-direction:column; gap:8px;">
@@ -198,7 +195,7 @@
                 htmlContent += `</div>`;
                 document.getElementById('mainPanel').innerHTML = htmlContent;
             } catch (err) {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Unable to fetch market signals. Retrying...</div>`;
+                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Unable to fetch market signals.</div>`;
             }
         }
 
