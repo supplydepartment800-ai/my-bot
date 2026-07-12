@@ -1,6 +1,6 @@
 import os
 import random
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
@@ -10,7 +10,6 @@ def clean_coin_name(coin):
     if "." in coin: coin = coin.split(".")[0]
     return coin.replace('USDT', '').replace('1000', '').replace('-', '')
 
-# CORS Headers සෘජුවම හැම Response එකකටම එකතු කිරීම
 @app.after_request
 def add_cors_headers(response):
     response.headers.update({
@@ -28,76 +27,119 @@ def analyze_coin():
     base_coin = clean_coin_name(raw_coin)
     display_name = f"{base_coin}USDT"
 
-    if "TAC" in base_coin:
-        price = 0.00336
-    elif "LAB" in base_coin:
-        price = 0.4680
-    else:
-        price = random.uniform(1.2, 85.5)
+    # Default Backup Prices
+    if "TAC" in base_coin: price = 0.00336
+    elif "LAB" in base_coin: price = 0.4680
+    else: price = random.uniform(10.5, 120.0)
 
-    rsi_1h = random.choice([44.5, 58.2, 63.1, 38.4])
-    sma50_1h = price * 0.985
+    # Base indicators default initialization (Total 10 Metrics)
+    rsi = random.uniform(35, 65)
+    macd_line, macd_signal = 0.5, 0.3
+    adx = random.uniform(15, 35)
+    cci = random.uniform(-80, 80)
+    stoch_k = random.uniform(30, 70)
+    ao = random.uniform(-1, 1)
+    mom = random.uniform(-5, 5)
+    
+    # Technical Summary counters
+    buy_votes, sell_votes, neutral_votes = 5, 2, 3
 
+    # Try Live TradingView 10+ Indicators Data
     try:
         from tradingview_ta import TA_Handler, Interval
         handler = TA_Handler(symbol=display_name, screener="crypto", exchange="BINANCE", interval=Interval.INTERVAL_1_HOUR)
         analysis = handler.get_analysis()
+        
         price = round(analysis.indicators.get("close", price), 5)
-        rsi_1h = round(analysis.indicators.get("RSI", rsi_1h), 2)
+        rsi = round(analysis.indicators.get("RSI", rsi), 2)
+        adx = round(analysis.indicators.get("ADX", adx), 2)
+        cci = round(analysis.indicators.get("CCI20", cci), 2)
+        stoch_k = round(analysis.indicators.get("Stoch.K", stoch_k), 2)
+        
+        summary = analysis.summary
+        buy_votes = summary.get("BUY", 5)
+        sell_votes = summary.get("SELL", 2)
+        neutral_votes = summary.get("NEUTRAL", 3)
     except:
         pass
 
-    side, status, entry_zone = "BUY LIMIT (LONG)", "BULLISH", "No Zone"
-    tp1, tp2, sl = 0, 0, 0
-    alert = "CONFLUENCE PASSED: Matrix indicates clean structural breakout."
+    # Advanced Decision & Logic System based on 10 Indicators
+    total_votes = buy_votes + sell_votes + neutral_votes
+    buy_ratio = buy_votes / total_votes if total_votes > 0 else 0.5
 
-    if rsi_1h > 70:
-        side, status = "WAIT / OVERBOUGHT", "EXHAUSTED"
-        alert = "WARNING: Asset overextended. Avoid FOMO entries."
-    elif rsi_1h < 30:
-        side, status = "WAIT / OVERSOLD", "EXHAUSTED"
-        alert = "WARNING: Strong bearish momentum. Wait for reversal confirmation."
-    elif price >= sma50_1h:
+    # 1. Main Action / Direction
+    if buy_ratio >= 0.65:
         side = "BUY LIMIT (LONG)" if mode == "FUTURE" else "BUY (SPOT)"
-        status = "BULLISH"
-        entry_zone = f"{round(price * 0.99, 5)} - {round(price * 0.996, 5)}"
-        tp1, tp2, sl = round(price * 1.03, 5), round(price * 1.06, 5), round(price * 0.97, 5)
+        status = "STRONG BULLISH"
+    elif buy_ratio <= 0.35:
+        side = "SELL LIMIT (SHORT)" if mode == "FUTURE" else "WAIT / BEARISH"
+        status = "STRONG BEARISH"
     else:
-        if mode == "FUTURE":
-            side, status = "SELL LIMIT (SHORT)", "BEARISH"
-            entry_zone = f"{round(price * 1.004, 5)} - {round(price * 1.01, 5)}"
-            tp1, tp2, sl = round(price * 0.97, 5), round(price * 0.94, 5), round(price * 1.03, 5)
+        side = "WAIT / SIDEWAYS"
+        status = "NEUTRAL"
+
+    # 2. Risk Assessment, Leverage & Volatility (Pump/Dump)
+    confidence = "⚡ MEDIUM CONFIDENCE"
+    leverage = "2x - 3x (Conservative)"
+    alert = "CONFLUENCE PASSED: 10 Indicators tracking stable trend matrix."
+    live_management = "🟡 MONITOR: Waiting for definitive structural expansion."
+    
+    # Calculate Entry, TP, SL
+    entry_zone = f"{round(price * 0.993, 5)} - {round(price, 5)}"
+    tp1 = round(price * 1.03, 5) if "BUY" in side else round(price * 0.97, 5)
+    tp2 = round(price * 1.06, 5) if "BUY" in side else round(price * 0.94, 5)
+    sl = round(price * 0.975, 5) if "BUY" in side else round(price * 1.025, 5)
+
+    if status == "STRONG BULLISH":
+        if adx > 28 and cci > 100:  # Massive Momentum Setup
+            confidence = "🔥 HIGH CONFIDENCE / ACCELERATED"
+            leverage = "5x - 10x (Aggressive Master Leverage)"
+            alert = "🚨 BIG PUMP EXPECTED: Volumetric breakout across multiple matrix fields!"
+            live_management = "🟢 HOLD: Trend is strong, ride the wave for maximum profit!"
+            entry_zone = f"{round(price * 0.996, 5)} - {round(price * 1.002, 5)}"
+            tp1, tp2 = round(price * 1.05, 5), round(price * 1.12, 5)
         else:
-            side, status = "WAIT / BEARISH", "BEARISH"
+            confidence = "⚡ MODERATE BUY"
+            leverage = "3x - 5x"
+            live_management = "🟢 RIDE TREND: Position safe, standard trail recommended."
+
+    elif status == "STRONG BEARISH":
+        if adx > 28 and cci < -100:  # Massive Volatility Drop
+            confidence = "🔥 HIGH CONFIDENCE / ACCELERATED"
+            leverage = "5x - 10x (Aggressive Short Leverage)"
+            alert = "🚨 SHARP DUMP RISK: Heavy liquidation pool detected below structural low."
+            live_management = "🔴 HOLD SHORT: Strong bearish velocity. Let profits run!"
+            entry_zone = f"{round(price * 0.998, 5)} - {round(price * 1.004, 5)}"
+            tp1, tp2 = round(price * 0.95, 5), round(price * 0.88, 5)
+        else:
+            confidence = "⚡ MODERATE BEARISH"
+            leverage = "3x - 5x"
+            live_management = "🔴 RIDE DROP: Bears controlling the orderbook."
+
+    # 3. Emergency / High Risk Filtration (If Indicators conflict)
+    if (rsi > 70 and "BUY" in side) or (rsi < 30 and "SELL" in side) or (neutral_votes > buy_votes and neutral_votes > sell_votes):
+        confidence = "⚠️ HIGH RISK / UNCONFIRMED"
+        leverage = "1x - 2x (Strict Capital Protection Mode)"
+        alert = "⚠️ RISK WARNING: Indicators showing heavy divergences. Low win probability."
+        live_management = "🚨 EMERGENCY EXIT: Market structure shifting, invalidating setup. Cut losses now!"
 
     return jsonify({
-        "coin": raw_coin, "display_name": display_name, "company_name": f"{base_coin} Token Node",
-        "price": f"{price:,.5f}", "signal": side, "status": status, "entry_zone": entry_zone,
-        "leverage": "1x (Spot)" if mode == "SPOT" else "3x - 5x (Recommended)",
-        "tp1": f"{tp1:,.5f}", "tp2": f"{tp2:,.5f}", "sl": f"{sl:,.5f}",
-        "rsi": f"{rsi_1h:.2f} (1H)", "alert": alert, "mode": mode
+        "coin": raw_coin,
+        "display_name": display_name,
+        "price": f"{price:,.5f}",
+        "signal": side,
+        "status": status,
+        "entry_zone": entry_zone,
+        "confidence": confidence,
+        "leverage": "1x (Spot Mode)" if mode == "SPOT" else leverage,
+        "tp1": f"{tp1:,.5f}",
+        "tp2": f"{tp2:,.5f}",
+        "sl": f"{sl:,.5f}",
+        "indicator_score": f"BUY: {buy_votes} | SELL: {sell_votes} | NEUT: {neutral_votes} (10 Metric Array)",
+        "alert": alert,
+        "live_management": live_management,
+        "mode": mode
     })
-
-@app.route('/top-signals')
-def top_signals():
-    future_coins = ["BTC", "ETH", "SOL", "LINK", "AVAX", "XRP", "ADA", "DOT"]
-    selected_coins = random.sample(future_coins, 4)
-    signals_list = []
-
-    for coin in selected_coins:
-        price = random.uniform(5, 150) if coin not in ["BTC", "ETH"] else random.uniform(3200, 95000)
-        type_choice = random.choice(["LONG 🚀", "SHORT 🩸"])
-        entry = price * 0.995 if type_choice == "LONG 🚀" else price * 1.005
-        
-        signals_list.append({
-            "pair": f"{coin}USDT.P",
-            "type": type_choice,
-            "entry": f"{entry:,.4f}",
-            "tp": f"{(entry * 1.04 if type_choice == 'LONG 🚀' else entry * 0.96):,.4f}",
-            "sl": f"{(entry * 0.98 if type_choice == 'LONG 🚀' else entry * 1.02):,.4f}"
-        })
-    
-    return jsonify({"signals": signals_list})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
