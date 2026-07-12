@@ -51,7 +51,6 @@
         .lbl { font-size: 9px; color: var(--text-sub); font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
         .val { font-size: 13px; font-weight: 800; font-family: monospace; }
         
-        /* Signals Tab Style */
         .sig-card { background: var(--box-bg); border: 1px solid var(--border); padding: 12px; border-radius: 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
         .sig-row { display: flex; justify-content: space-between; align-items: center; }
         .sig-badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; }
@@ -89,7 +88,6 @@
         let currentCoin = "TACUSDT.P";
         let currentMode = "FUTURE";
         let isDark = false;
-        // ඔයාගේ live Railway backend URL එක
         const api_base_url = 'https://worker-production-c4493.up.railway.app';
 
         function toggleTheme() {
@@ -169,7 +167,13 @@
         async function fetchTopSignals() {
             try {
                 document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Scanning Future Markets...</div>`;
-                const res = await fetch(`${api_base_url}/top-signals`);
+                
+                // CORS බ්ලොක් වීම් මඟ හැරීමට ආරක්ෂිතව Fetch කිරීම
+                const res = await fetch(`${api_base_url}/top-signals`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await res.json();
 
                 let htmlContent = `<div class="fade-in" style="display:flex; flex-direction:column; gap:8px;">
@@ -194,7 +198,7 @@
                 htmlContent += `</div>`;
                 document.getElementById('mainPanel').innerHTML = htmlContent;
             } catch (err) {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Unable to fetch market signals.</div>`;
+                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Unable to fetch market signals. Retrying...</div>`;
             }
         }
 
