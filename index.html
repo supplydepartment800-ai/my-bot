@@ -117,14 +117,17 @@
         async function fetchAnalysisData() {
             try {
                 document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Computing 10-Indicator Matrix...</div>`;
+                
+                // Normal plain text fetch logic to fully bypass strict mixed blockings
                 const res = await fetch(`${api_base_url}/analyze?coin=${encodeURIComponent(currentCoin)}&mode=${currentMode}`);
+                if (!res.ok) throw new Error("API Invalid State");
+                
                 const data = await res.json();
 
                 let isBull = data.status.includes('BULLISH');
                 let isBear = data.status.includes('BEARISH');
                 let badgeClass = isBull ? 'BULLISH' : (isBear ? 'BEARISH' : 'NEUTRAL');
                 
-                // Color formatting for alert types
                 let alertColor = data.alert.includes('PUMP') ? 'var(--green)' : (data.alert.includes('RISK') ? 'var(--red)' : 'var(--primary)');
                 let managementColor = data.live_management.includes('EMERGENCY') ? 'var(--red)' : (data.live_management.includes('HOLD') ? 'var(--green)' : 'var(--orange)');
 
@@ -138,7 +141,7 @@
                             <span class="badge ${badgeClass}">${data.signal}</span>
                         </div>
 
-                        <div class="alert-card" style="border-left-color: ${alertColor}; background: rgba(15, 23, 42, 0.03);">
+                        <div class="alert-card" style="border-left-color: ${alertColor}; background: rgba(15, 23, 42, 0.02);">
                             <div style="font-size:10px; color:var(--text-sub); font-weight:700; margin-bottom:2px;">VOLUMETRIC PROJECTION:</div>
                             ${data.alert}
                         </div>
@@ -158,12 +161,16 @@
                         </div>
 
                         <div style="font-size:11px; text-align:center; color:var(--text-sub); font-weight:600; background:var(--box-bg); padding:6px; border-radius:8px;">
-                            📊 Analysis Engine Score: ${data.indicator_score}
+                            📊 Analysis Engine Setup: ${data.indicator_score} (10 Metric Array)
                         </div>
                     </div>
                 `;
             } catch (err) {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Connection failed. Check Backend API.</div>`;
+                document.getElementById('mainPanel').innerHTML = `
+                    <div style="color:var(--red); text-align:center; padding:20px;">
+                        Connection failed. Check Backend API.<br>
+                        <button onclick="fetchAnalysisData()" style="margin-top:10px; padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">RETRY MATRIX</button>
+                    </div>`;
             }
         }
 
