@@ -6,24 +6,16 @@
     <title>Nexus AI Premium Terminal</title>
     <script src="https://s3.tradingview.com/tv.js"></script>
     <style>
-        /* CSS Variables for Dynamic Theme Switching */
+        /* 💎 Next-Level Light Blue & White Theme */
         :root {
-            --bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            --panel: rgba(255, 255, 255, 0.8);
-            --border: rgba(255, 255, 255, 0.6);
+            --bg: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
+            --panel: rgba(255, 255, 255, 0.85);
+            --border: rgba(2, 132, 199, 0.15);
             --text: #0f172a;
             --text-sub: #475569;
-            --primary: #2563eb;
+            --primary: #0284c7; /* Premium Light Blue */
+            --primary-light: #e0f2fe;
             --box-bg: rgba(255, 255, 255, 0.6);
-        }
-        [data-theme="dark"] {
-            --bg: linear-gradient(135deg, #0f172a 0%, #020617 100%);
-            --panel: rgba(30, 41, 59, 0.7);
-            --border: rgba(255, 255, 255, 0.05);
-            --text: #f8fafc;
-            --text-sub: #94a3b8;
-            --primary: #3b82f6;
-            --box-bg: rgba(15, 23, 42, 0.6);
         }
 
         body {
@@ -35,37 +27,47 @@
             height: 100vh; overflow: hidden;
         }
 
-        /* 📱 Emulating Strict 9:16 Mobile View Container */
+        /* 📱 Strict 9:16 Mobile View Container */
         .phone-wrapper {
             width: 100%; max-width: 420px; height: 100vh;
             max-height: 900px; box-sizing: border-box;
-            padding: 12px; display: flex; flex-direction: column; gap: 8px;
+            padding: 14px; display: flex; flex-direction: column; gap: 10px;
             position: relative;
         }
 
-        /* 🎬 Premium Animated Splash Screen */
+        /* 🎬 Smooth Animated Splash Screen */
         #splash {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0f172a; display: flex; flex-direction: column;
+            background: #ffffff; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 9999;
-            transition: opacity 0.6s ease, transform 0.6s ease; border-radius: 12px;
+            transition: opacity 0.5s ease, transform 0.5s ease; border-radius: 12px;
         }
         .splash-title {
-            font-size: 26px; font-weight: 900; letter-spacing: 3px;
-            background: linear-gradient(45deg, #3b82f6, #60a5fa);
+            font-size: 28px; font-weight: 900; letter-spacing: 4px;
+            background: linear-gradient(45deg, #0284c7, #38bdf8);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             opacity: 0; transform: scale(0.8);
-            animation: popIn 1s forwards cubic-bezier(0.16, 1, 0.3, 1);
+            animation: popIn 0.8s forwards cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes popIn { to { opacity: 1; transform: scale(1); } }
 
-        /* Top Bar & Theme Toggle */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
-        .logo-txt { font-weight: 800; font-size: 16px; letter-spacing: 1px; color: var(--primary); }
-        .theme-btn { 
-            background: var(--panel); border: 1px solid var(--border); 
-            padding: 6px 12px; border-radius: 20px; color: var(--text);
-            font-size: 11px; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px);
+        /* Top Bar */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
+        .logo-txt { font-weight: 800; font-size: 18px; letter-spacing: 1px; color: var(--primary); }
+
+        /* 🔀 Premium Spot / Future Mode Selector Tabs */
+        .trade-tabs {
+            display: flex; background: rgba(2, 132, 199, 0.08); 
+            padding: 4px; border-radius: 12px; border: 1px solid var(--border);
+        }
+        .tab-btn {
+            flex: 1; padding: 10px; border: none; background: transparent;
+            color: var(--text-sub); font-weight: 700; font-size: 13px;
+            border-radius: 8px; cursor: pointer; transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            background: #ffffff; color: var(--primary);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
         }
 
         /* Search Section */
@@ -74,26 +76,28 @@
             flex: 1; padding: 12px; background: var(--panel);
             border: 1px solid var(--border); color: var(--text);
             border-radius: 12px; font-size: 14px; text-transform: uppercase;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02); outline: none;
         }
-        button {
-            padding: 12px 16px; background: var(--primary);
+        button#analyzeBtn {
+            padding: 12px 20px; background: var(--primary);
             border: none; color: white; font-weight: bold;
             border-radius: 12px; cursor: pointer; font-size: 13px;
+            transition: background 0.2s;
         }
+        button#analyzeBtn:hover { background: #0369a1; }
 
         /* Chart Wrapper */
         #chart { 
-            height: 38% !important; width: 100%; border-radius: 14px; 
-            overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            height: 35% !important; width: 100%; border-radius: 16px; 
+            overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.03);
         }
 
-        /* Signals Panel */
+        /* Signals Panel with Glassmorphism */
         .panel {
             background: var(--panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             padding: 14px; border-radius: 16px; border: 1px solid var(--border);
             flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            box-shadow: 0 10px 30px rgba(2, 132, 199, 0.04);
         }
 
         .header-row { display: flex; justify-content: space-between; align-items: center; }
@@ -103,7 +107,6 @@
         .BULLISH { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
         .BEARISH { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
         .NEUTRAL, .EXHAUSTED { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
-        [data-theme="dark"] .NEUTRAL, [data-theme="dark"] .EXHAUSTED { background: #334155; color: #f1f5f9; border: 1px solid #475569; }
 
         .alert-card {
             background: var(--box-bg); padding: 10px; border-radius: 10px;
@@ -117,60 +120,66 @@
         .green-txt { color: #10b981; }
     </style>
 </head>
-<body data-theme="dark">
+<body>
 
     <div class="phone-wrapper">
+        <!-- Splash Screen -->
         <div id="splash">
-            <div class="splash-title">NEXUS AI SIGNAL</div>
+            <div class="splash-title">NEXUS AI PRO</div>
         </div>
 
         <div class="top-bar">
-            <div class="logo-txt">NEXUS AI v2.0</div>
-            <button class="theme-btn" onclick="toggleTheme()">SWITCH THEME</button>
+            <div class="logo-txt">NEXUS AI v3.0</div>
+        </div>
+
+        <!-- 📊 Spot / Future Tabs -->
+        <div class="trade-tabs">
+            <button class="tab-btn active" id="tab-future" onclick="switchMode('FUTURE')">FUTURE TRADING</button>
+            <button class="tab-btn" id="tab-spot" onclick="switchMode('SPOT')">SPOT TRADING</button>
         </div>
 
         <div class="search-box">
             <input type="text" id="coinInput" value="BTCUSDT" placeholder="ENTER COIN (E.G. SOLUSDT)">
-            <button onclick="loadCoin()">ANALYZE</button>
+            <button id="analyzeBtn" onclick="loadCoin()">ANALYZE</button>
         </div>
 
         <div id="chart"></div>
 
         <div class="panel" id="signalPanel">
-            <div style="text-align: center; color: var(--text-sub); padding-top: 30px;">Initializing System Engine...</div>
+            <div style="text-align: center; color: var(--text-sub); padding-top: 30px;">Initializing Nexus Engine...</div>
         </div>
     </div>
 
     <script>
         let currentCoin = "BTCUSDT";
-        let currentTheme = "dark";
+        let currentMode = "FUTURE"; // Default Mode
         const api_base_url = 'https://worker-production-c4493.up.railway.app/analyze';
 
-        // ⏳ Splash screen removal
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash');
                 if(splash) {
                     splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 600);
+                    setTimeout(() => splash.remove(), 500);
                 }
-            }, 1800);
+            }, 1200);
         });
 
-        function toggleTheme() {
-            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.body.setAttribute('data-theme', currentTheme);
-            loadTradingView(currentCoin); // Reload chart with new theme configuration
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab-future').classList.toggle('active', mode === 'FUTURE');
+            document.getElementById('tab-spot').classList.toggle('active', mode === 'SPOT');
+            fetchSignalData(); // Refresh data for the newly selected mode
         }
 
         function loadTradingView(coin) {
-            document.getElementById('chart').innerHTML = ""; // Reset chart container
+            document.getElementById('chart').innerHTML = ""; 
             new TradingView.widget({
                 "container_id": "chart",
                 "autosize": true,
                 "symbol": "BINANCE:" + coin,
                 "interval": "60",
-                "theme": currentTheme,
+                "theme": "light", // Matched with White/Blue UI
                 "style": "1",
                 "enable_publishing": false,
                 "hide_side_toolbar": true,
@@ -180,7 +189,7 @@
 
         async function fetchSignalData() {
             try {
-                const response = await fetch(`${api_base_url}?coin=${currentCoin}`);
+                const response = await fetch(`${api_base_url}?coin=${currentCoin}&mode=${currentMode}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -193,7 +202,7 @@
                 document.getElementById('signalPanel').innerHTML = `
                     <div class="header-row">
                         <div>
-                            <div class="coin-name">${data.coin}</div>
+                            <div class="coin-name">${data.coin} <span style="font-size:11px; color:var(--primary);">(${data.mode})</span></div>
                             <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">Live: ${data.price} USDT</div>
                         </div>
                         <span class="badge ${badgeClass}">${data.signal}</span>
@@ -215,7 +224,7 @@
                     </div>
                 `;
             } catch (err) {
-                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Reconnecting to Nexus Core Architecture...</div>`;
+                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Reconnecting to Nexus Core...</div>`;
             }
         }
 
@@ -228,10 +237,10 @@
             fetchSignalData();
         }
 
-        // Bootstrapping Terminal
+        // Bootstrap
         loadTradingView(currentCoin);
         fetchSignalData();
-        setInterval(fetchSignalData, 12000); // Efficient background syncing every 12 seconds
+        setInterval(fetchSignalData, 12000);
     </script>
 </body>
 </html>
