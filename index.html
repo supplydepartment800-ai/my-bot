@@ -8,15 +8,15 @@
     <style>
         :root {
             --bg: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
-            --panel: rgba(255, 255, 255, 0.88);
-            --border: rgba(14, 165, 233, 0.16);
+            --panel: rgba(255, 255, 255, 0.86);
+            --border: rgba(14, 165, 233, 0.18);
             --text: #0f172a;
             --text-sub: #475569;
             --primary: #0284c7;
             --box-bg: rgba(241, 245, 249, 0.75);
             --green: #059669;
             --red: #dc2626;
-            --shadow: 0 10px 30px rgba(2, 132, 199, 0.05);
+            --shadow: 0 10px 30px rgba(2, 132, 199, 0.06);
         }
 
         body {
@@ -32,38 +32,57 @@
             position: relative; overflow: hidden;
         }
 
-        .app-screen { display: flex; flex-direction: column; gap: 8px; height: 100%; }
+        /* Screens Management */
+        .auth-screen { display: flex; flex-direction: column; gap: 12px; justify-content: center; height: 100%; padding: 20px; box-sizing: border-box; }
+        .app-screen { display: none; flex-direction: column; gap: 8px; height: 100%; }
 
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; }
-        .logo-txt { font-weight: 900; font-size: 17px; color: var(--primary); }
-        .live-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+        .card { background: var(--panel); backdrop-filter: blur(20px); border: 1px solid var(--border); padding: 20px; border-radius: 24px; box-shadow: var(--shadow); }
+        .auth-title { font-size: 22px; font-weight: 900; color: var(--primary); text-align: center; margin-bottom: 4px; }
         
-        @keyframes pulse {
-            0% { transform: scale(0.9); opacity: 0.6; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.9); opacity: 0.6; }
-        }
-
-        .search-box { display: flex; gap: 6px; }
-        .search-box input {
+        input {
             width: 100%; padding: 12px 14px; box-sizing: border-box; background: rgba(255,255,255,0.9);
             border: 1px solid var(--border); color: var(--text); border-radius: 12px; font-size: 14px;
-            outline: none; font-weight: 600; text-transform: uppercase;
+            outline: none; font-weight: 600; margin-bottom: 8px;
         }
-        .scan-btn { width: auto; padding: 0 16px; background: var(--primary); border: none; color: white; font-weight: 900; border-radius: 12px; cursor: pointer; }
 
-        /* Navigation Menu tabs */
-        .navigation-tabs { display: flex; background: rgba(2, 132, 199, 0.06); padding: 4px; border-radius: 14px; border: 1px solid var(--border); }
-        .nav-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-sub); font-weight: 800; font-size: 12px; border-radius: 10px; cursor: pointer; text-align: center;}
-        .nav-btn.active { background: white; color: var(--primary); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.1); }
+        button {
+            width: 100%; padding: 13px; background: var(--primary); border: none; color: white;
+            font-weight: 900; border-radius: 12px; cursor: pointer; font-size: 14px; transition: all 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        .sec-btn { background: #0f172a; margin-top: 4px; }
+        .link-text { text-align: center; font-size: 12px; color: var(--primary); font-weight: 700; cursor: pointer; margin-top: 6px; }
 
-        .content-section { display: none; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; scrollbar-width: none; }
-        .content-section::-webkit-scrollbar { display: none; }
-        .content-section.active { display: flex; }
-
-        #chart { height: 35% !important; width: 100%; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
-        .panel { background: var(--panel); padding: 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.7); display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); }
+        /* App Navbar & Profile Avatar */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; }
+        .logo-txt { font-weight: 900; font-size: 17px; color: var(--primary); }
+        .profile-container { display: flex; align-items: center; gap: 8px; cursor: pointer; position: relative; }
+        .avatar { width: 32px; height: 32px; background: #0284c7; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; box-shadow: 0 0 10px rgba(2,132,199,0.3); }
         
+        .profile-dropdown {
+            position: absolute; top: 38px; right: 0; background: white; border: 1px solid var(--border);
+            padding: 8px; border-radius: 12px; box-shadow: var(--shadow); display: none; z-index: 1000; width: 120px;
+        }
+        .profile-dropdown div { font-size: 12px; font-weight: 800; padding: 6px; color: var(--red); cursor: pointer; text-align: center; }
+
+        /* Trading & AI UX Layout */
+        .ai-chat-box { background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .ai-input-row { display: flex; gap: 6px; }
+        .ai-input-row input { margin: 0; }
+        .ai-btn { width: auto; background: #0f172a; padding: 10px 14px; font-size: 12px; }
+        .ai-response { font-size: 12px; color: #1e3a8a; font-weight: 700; background: #eff6ff; padding: 8px; border-radius: 8px; display: none; line-height: 1.4; border-left: 3px solid #3b82f6; }
+
+        .mode-tabs { display: flex; background: rgba(2, 132, 199, 0.06); padding: 4px; border-radius: 14px; border: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 9px; border: none; background: transparent; color: var(--text-sub); font-weight: 800; font-size: 12.5px; border-radius: 10px; cursor: pointer; }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.1); }
+
+        .search-box { display: flex; gap: 6px; }
+        .search-box input { margin: 0; text-transform: uppercase; }
+        .scan-btn { width: auto; }
+
+        #chart { height: 28% !important; width: 100%; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+        
+        .panel { background: var(--panel); padding: 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.7); flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); scrollbar-width: none; }
         .header-row { display: flex; justify-content: space-between; align-items: center; }
         .coin-name { font-size: 18px; font-weight: 900; }
         .badge { padding: 4px 10px; border-radius: 30px; font-weight: 900; font-size: 9.5px; text-transform: uppercase; }
@@ -71,71 +90,106 @@
         .BEARISH { background: rgba(220, 38, 38, 0.1); color: var(--red); border: 1px solid rgba(220,38,38,0.2); }
         .NEUTRAL, .EXHAUSTED { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
         
-        .alert-card { background: var(--box-bg); padding: 10px; border-radius: 12px; font-size: 11px; line-height: 1.4; border-left: 4px solid var(--primary); font-weight: 700; }
+        .alert-card { background: var(--box-bg); padding: 8px 10px; border-radius: 12px; font-size: 11px; line-height: 1.4; border-left: 4px solid var(--primary); font-weight: 700; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         .grid-item { background: var(--box-bg); padding: 8px; border-radius: 10px; border: 1px solid var(--border); }
         .lbl { font-size: 9px; color: var(--text-sub); font-weight: 800; text-transform: uppercase; }
         .val { font-size: 12px; font-weight: 800; font-family: monospace; }
         .green-txt { color: var(--green); }
-
-        /* 💬 FULL SIZE AI ASSISTANT CHAT SCREEN GRAPHICS */
-        .chat-container { display: flex; flex-direction: column; height: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 22px; overflow: hidden; }
-        .chat-header { background: #0f172a; color: white; padding: 12px; font-size: 12.5px; font-weight: 800; text-align: center; }
-        .chat-messages { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
-        .chat-messages::-webkit-scrollbar { display: none; }
-        
-        .msg-bubble { max-width: 85%; padding: 10px 14px; border-radius: 16px; font-size: 13px; font-weight: 600; line-height: 1.4; }
-        .msg-bubble.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .msg-bubble.bot { background: #f1f5f9; color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; border-left: 3px solid var(--primary); }
-        
-        .chat-input-row { display: flex; gap: 6px; padding: 10px; background: white; border-top: 1px solid var(--border); }
-        .chat-input-row input { margin: 0; padding: 10px; border-radius: 10px; border: 1px solid var(--border); outline: none; font-weight: 600; width: 100%; }
-        .chat-send-btn { width: auto; padding: 10px 16px; font-size: 12px; background: #0f172a; color: white; border: none; font-weight: 800; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="phone-wrapper">
 
-        <!-- MAIN APPLICATION APP INTERFACE -->
+        <!-- 🏢 SCREEN 1: LOGIN -->
+        <div class="auth-screen" id="screen-login">
+            <div class="card">
+                <div class="auth-title">NEXUS LOGIN</div>
+                <input type="email" id="loginEmail" placeholder="Enter Email Address">
+                <input type="password" id="loginPass" placeholder="Enter Password">
+                <button onclick="handleLogin()">SECURE LOGIN</button>
+                <div class="link-text" onclick="showScreen('register')">Create New Premium Account</div>
+                <div class="link-text" onclick="showScreen('forget')">Forgot Password?</div>
+            </div>
+        </div>
+
+        <!-- 🏢 SCREEN 2: REGISTER -->
+        <div class="auth-screen" id="screen-register" style="display:none;">
+            <div class="card">
+                <div class="auth-title">CREATE ACCOUNT</div>
+                <input type="text" id="regName" placeholder="Your Full Name">
+                <input type="email" id="regEmail" placeholder="Your Valid Email">
+                <input type="password" id="regPass" placeholder="Create Secure Password">
+                <button onclick="handleRegister()">SEND VERIFICATION OTP</button>
+                <div class="link-text" onclick="showScreen('login')">Already have an account? Login</div>
+            </div>
+        </div>
+
+        <!-- 🏢 SCREEN 3: OTP VERIFY -->
+        <div class="auth-screen" id="screen-otp" style="display:none;">
+            <div class="card">
+                <div class="auth-title">ENTER EMAIL OTP</div>
+                <div style="font-size:12px; text-align:center; color:var(--text-sub); margin-bottom:8px;">We sent a 6-digit code to your inbox.</div>
+                <input type="text" id="otpInput" placeholder="Enter 6-Digit OTP">
+                <button onclick="handleVerifyOtp()">VERIFY & COMPLETE</button>
+            </div>
+        </div>
+
+        <!-- 🏢 SCREEN 4: FORGET PASSWORD -->
+        <div class="auth-screen" id="screen-forget" style="display:none;">
+            <div class="card">
+                <div class="auth-title">RESET ACCOUNT</div>
+                <input type="email" id="forgetEmail" placeholder="Enter Registered Email">
+                <button onclick="handleForgetPassword()">SEND RESET OTP</button>
+                <div class="link-text" onclick="showScreen('login')">Back to Login</div>
+            </div>
+        </div>
+
+        <!-- 🏢 SCREEN 5: CREATE NEW PASSWORD -->
+        <div class="auth-screen" id="screen-reset-confirm" style="display:none;">
+            <div class="card">
+                <div class="auth-title">NEW PASSWORD</div>
+                <input type="password" id="newPassInput" placeholder="Enter New Secure Password">
+                <button onclick="handleResetPasswordConfirm()">CONFIRM NEW PASSWORD</button>
+            </div>
+        </div>
+
+        <!-- 🖥️ MAIN APPLICATION SCREEN (ANALYZER ENGINE) -->
         <div class="app-screen" id="screen-app">
             <div class="top-bar">
                 <div class="logo-txt">NEXUS TERMINAL v3.0</div>
-                <div><span class="live-dot"></span> <span style="font-size: 11px; font-weight: 800; color:var(--text-sub)">Live Core</span></div>
+                <!-- Profile Avatar Component -->
+                <div class="profile-container" onclick="toggleDropdown()">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div onclick="handleLogout()">Logout Account</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Global Search & Execution Controls -->
+            <!-- AI Assistant Dynamic Frame -->
+            <div class="ai-chat-box">
+                <div style="font-size: 10px; font-weight: 800; color: var(--primary);" id="aiHeaderTitle">🤖 NEXUS AI ADVISOR</div>
+                <div class="ai-input-row">
+                    <input type="text" id="aiMsgInput" placeholder="Ask AI: Big pump ekak yaida?">
+                    <button class="ai-btn" onclick="askAiEngine()">ASK AI</button>
+                </div>
+                <div class="ai-response" id="aiResponseArea"></div>
+            </div>
+
+            <div class="mode-tabs">
+                <button class="tab-btn active" id="tab-future" onclick="switchMode('FUTURE')">FUTURE SIGNALS</button>
+                <button class="tab-btn" id="tab-spot" onclick="switchMode('SPOT')">SPOT BALANCES</button>
+            </div>
+
             <div class="search-box">
                 <input type="text" id="coinInput" value="BTCUSDT">
                 <button class="scan-btn" onclick="executeScan()">RUN SCAN</button>
             </div>
 
-            <!-- NAVIGATION TAB COMPONENT -->
-            <div class="navigation-tabs">
-                <button class="nav-btn active" id="btn-future-tab" onclick="switchSection('future')">FUTURE METRICS</button>
-                <button class="nav-btn" id="btn-spot-tab" onclick="switchSection('spot')">SPOT ACCUM</button>
-                <button class="nav-btn" id="btn-ai-tab" onclick="switchSection('ai')">🤖 NEXUS GEMINI CHAT</button>
-            </div>
-
-            <!-- SECTION 1 & 2: TRADING MATRIX PORTAL -->
-            <div class="content-section active" id="section-trade">
-                <div id="chart"></div>
-                <div class="panel" id="signalPanel"></div>
-            </div>
-
-            <!-- SECTION 3: FULL SCREEN GEMINI STYLE CHAT MODULE -->
-            <div class="content-section" id="section-ai">
-                <div class="chat-container">
-                    <div class="chat-header" id="chatHeaderTitle">🤖 NEXUS MATRIX CORE AI</div>
-                    <div class="chat-messages" id="chatMessagesArea">
-                        <div class="msg-bubble bot">ආයුබෝවන්! මම Nexus Gemini AI. මගෙන් ඕනෑම වෙලාවක මේ සක්‍රීය Coin එකේ සජීවී තත්ත්වය සහ Market දිශාව ගැන සිංහලෙන් අහන්න.</div>
-                    </div>
-                    <div class="chat-input-row">
-                        <input type="text" id="chatMsgInput" placeholder="BTC pump weida? / dump weida?">
-                        <button class="chat-send-btn" onclick="sendChatMessage()">SEND</button>
-                    </div>
-                </div>
-            </div>
+            <div id="chart"></div>
+            <div class="panel" id="signalPanel"></div>
         </div>
 
     </div>
@@ -143,61 +197,137 @@
     <script>
         let currentCoin = "BTCUSDT";
         let currentMode = "FUTURE";
+        let currentUser = null;
+        let authSessionEmail = "";
+        let authOtpType = "REGISTRATION"; // REGISTRATION or FORGET
+
+        // Local Server Connection Context
         const api_base_url = 'http://127.0.0.1:8080';
 
-        // Direct System Boot Configuration
-        window.onload = function() {
-            loadTradingView(currentCoin);
-            fetchSignalData();
-        };
+        function showScreen(screen) {
+            document.querySelectorAll('.auth-screen').forEach(s => s.style.display = 'none');
+            document.getElementById('screen-app').style.display = 'none';
+            document.getElementById(`screen-${screen}`).style.display = 'flex';
+        }
 
-        // NAVIGATION SWITCH LOGIC LAYER
-        function switchSection(target) {
-            document.getElementById('btn-future-tab').classList.remove('active');
-            document.getElementById('btn-spot-tab').classList.remove('active');
-            document.getElementById('btn-ai-tab').classList.remove('active');
-            
-            document.getElementById('section-trade').classList.remove('active');
-            document.getElementById('section-ai').classList.remove('active');
+        function toggleDropdown() {
+            const drop = document.getElementById('profileDropdown');
+            drop.style.display = drop.style.display === 'block' ? 'none' : 'block';
+        }
 
-            if(target === 'future') {
-                currentMode = "FUTURE";
-                document.getElementById('btn-future-tab').classList.add('active');
-                document.getElementById('section-trade').classList.add('active');
-                fetchSignalData();
-            } else if(target === 'spot') {
-                currentMode = "SPOT";
-                document.getElementById('btn-spot-tab').classList.add('active');
-                document.getElementById('section-trade').classList.add('active');
-                fetchSignalData();
-            } else if(target === 'ai') {
-                document.getElementById('btn-ai-tab').classList.add('active');
-                document.getElementById('section-ai').classList.add('active');
+        // AUTHENTICATION LOGIC PIPELINES
+        async function handleRegister() {
+            let name = document.getElementById('regName').value.trim();
+            let email = document.getElementById('regEmail').value.trim();
+            let password = document.getElementById('regPass').value;
+
+            if(!name || !email || !password) return alert("All profile parameters required!");
+
+            let res = await fetch(`${api_base_url}/auth/register`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, email, password})
+            });
+            let data = await res.json();
+            if(data.error) return alert(data.error);
+
+            authSessionEmail = email;
+            authOtpType = "REGISTRATION";
+            showScreen('otp');
+        }
+
+        async function handleVerifyOtp() {
+            let otp = document.getElementById('otpInput').value.trim();
+            let res = await fetch(`${api_base_url}/auth/verify-otp`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: authSessionEmail, otp})
+            });
+            let data = await res.json();
+            if(data.error) return alert(data.error);
+
+            alert(data.message);
+            if(authOtpType === "REGISTRATION") {
+                showScreen('login');
+            } else {
+                showScreen('reset-confirm');
             }
         }
 
-        // REAL-TIME CHAT PROCESSOR
-        async function sendChatMessage() {
-            let msgInput = document.getElementById('chatMsgInput');
-            let text = msgInput.value.trim();
-            if(!text) return;
+        async function handleForgetPassword() {
+            let email = document.getElementById('forgetEmail').value.trim();
+            if(!email) return alert("Email address required!");
 
-            msgInput.value = "";
-            const msgArea = document.getElementById('chatMessagesArea');
-            msgArea.innerHTML += `<div class="msg-bubble user">${text}</div>`;
-            msgArea.scrollTop = msgArea.scrollHeight;
-
-            let res = await fetch(`${api_base_url}/ai_chat`, {
+            let res = await fetch(`${api_base_url}/auth/forget-password`, {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({msg: text, coin: currentCoin})
+                body: JSON.stringify({email})
             });
             let data = await res.json();
-            
-            msgArea.innerHTML = "";
-            data.history.forEach(m => {
-                msgArea.innerHTML += `<div class="msg-bubble ${m.sender}">${m.text}</div>`;
+            if(data.error) return alert(data.error);
+
+            authSessionEmail = email;
+            authOtpType = "FORGET";
+            showScreen('otp');
+        }
+
+        async function handleResetPasswordConfirm() {
+            let password = document.getElementById('newPassInput').value;
+            let res = await fetch(`${api_base_url}/auth/reset-password-confirm`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: authSessionEmail, password})
             });
-            msgArea.scrollTop = msgArea.scrollHeight;
+            let data = await res.json();
+            if(data.error) return alert(data.error);
+
+            alert(data.message);
+            showScreen('login');
+        }
+
+        async function handleLogin() {
+            let email = document.getElementById('loginEmail').value.trim();
+            let password = document.getElementById('loginPass').value;
+
+            let res = await fetch(`${api_base_url}/auth/login`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            let data = await res.json();
+            if(data.error) return alert(data.error);
+
+            currentUser = data.user;
+            
+            // Render Profile UI Avatar and Setup Names dynamically
+            document.getElementById('userAvatar').innerText = currentUser.name.charAt(0).toUpperCase();
+            document.getElementById('aiHeaderTitle').innerText = `🤖 NEXUS AI ADVISOR (Hi ${currentUser.name}!)`;
+            
+            document.getElementById('screen-login').style.display = 'none';
+            document.getElementById('screen-app').style.display = 'flex';
+            
+            loadTradingView(currentCoin);
+            fetchSignalData();
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            document.getElementById('profileDropdown').style.display = 'none';
+            showScreen('login');
+        }
+
+        // CHAT & CORE PIPELINES
+        async function askAiEngine() {
+            let msg = document.getElementById('aiMsgInput').value.trim();
+            if(!msg) return;
+            const area = document.getElementById('aiResponseArea');
+            area.style.display = "block"; area.innerText = "විශ්ලේෂණය කරමින් පවතී... ⏳";
+            
+            let res = await fetch(`${api_base_url}/ai_chat?msg=${encodeURIComponent(msg)}&coin=${currentCoin}&name=${encodeURIComponent(currentUser.name)}`);
+            let data = await res.json();
+            area.innerText = data.reply;
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab-future').classList.toggle('active', mode === 'FUTURE');
+            document.getElementById('tab-spot').classList.toggle('active', mode === 'SPOT');
+            fetchSignalData();
         }
 
         function loadTradingView(coin) {
@@ -209,29 +339,30 @@
         }
 
         async function fetchSignalData() {
+            if(!currentUser) return;
             try {
                 const response = await fetch(`${api_base_url}/analyze?coin=${currentCoin}&mode=${currentMode}`);
                 const data = await response.json();
 
                 let badgeClass = data.status;
                 let tradePermissionHtml = data.signal.includes("WAIT") 
-                    ? `<div style="background:rgba(220,38,38,0.08); border:1px solid var(--red); color:var(--red); text-align:center; padding:6px; border-radius:10px; font-weight:900; font-size:11px;">🚫 RISK STANDBY: ට්‍රේඩ් එකක් ගැනීමෙන් වලකින්න</div>`
-                    : `<div style="background:rgba(5,150,105,0.08); border:1px solid var(--green); color:var(--green); text-align:center; padding:6px; border-radius:10px; font-weight:900; font-size:11px;">✅ ACTIVE TRADING MATRIX PERMITTED</div>`;
+                    ? `<div style="background:rgba(220,38,38,0.08); border:1px solid var(--red); color:var(--red); text-align:center; padding:6px; border-radius:10px; font-weight:900; font-size:11px;">🚫 WAIT: දැන් ට්‍රේඩ් කරන්න එපා!</div>`
+                    : `<div style="background:rgba(5,150,105,0.08); border:1px solid var(--green); color:var(--green); text-align:center; padding:6px; border-radius:10px; font-weight:900; font-size:11px;">✅ ACTIVE TRADING PERMITTED</div>`;
 
                 document.getElementById('signalPanel').innerHTML = `
                     <div class="header-row">
-                        <div><div class="coin-name">${data.coin}</div><div style="font-size: 11px; font-weight:700;">Price: $${data.price}</div></div>
+                        <div><div class="coin-name">${data.coin}</div><div style="font-size: 11px; font-weight:700;">Rate: $${data.price}</div></div>
                         <span class="badge ${badgeClass}">${data.signal}</span>
                     </div>
                     ${tradePermissionHtml}
-                    <div class="alert-card" style="border-left-color:${badgeClass=='BULLISH'?'var(--green)':'var(--red)'}">${data.alert}</div>
+                    <div class="alert-card" style="border-left-color:${badgeClass==='BULLISH'?'var(--green)':'var(--red)'}">${data.alert}</div>
                     <div class="grid">
                         <div class="grid-item"><div class="lbl">🎯 Entry Zone</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
-                        <div class="grid-item"><div class="lbl">🛡️ Leverage Limit</div><div class="val">${data.leverage}</div></div>
+                        <div class="grid-item"><div class="lbl">🛡️ Leverage</div><div class="val">${data.leverage}</div></div>
                         <div class="grid-item"><div class="lbl">📈 Target 1</div><div class="val green-txt">$${data.tp1}</div></div>
                         <div class="grid-item"><div class="lbl">🛑 Stop Loss</div><div class="val" style="color:var(--red);">$${data.sl}</div></div>
                         <div class="grid-item"><div class="lbl">📈 Target 2</div><div class="val green-txt">$${data.tp2}</div></div>
-                        <div class="grid-item"><div class="lbl">📈 Target 3</div><div class="val green-txt">$${data.tp3}</div></div>
+                        <div class="grid-item"><div class="lbl">📊 RSI</div><div class="val">${data.rsi}</div></div>
                     </div>
                 `;
             } catch (e) {}
