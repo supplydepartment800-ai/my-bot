@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus AI Premium Terminal</title>
+    <title>Nexus AI Premium Terminal v3.5</title>
     <script src="https://s3.tradingview.com/tv.js"></script>
     <style>
-        /* 💎 Next-Level Light Blue & White Theme */
         :root {
             --bg: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%);
-            --panel: rgba(255, 255, 255, 0.85);
-            --border: rgba(2, 132, 199, 0.15);
+            --panel: rgba(255, 255, 255, 0.9);
+            --border: rgba(2, 132, 199, 0.12);
             --text: #0f172a;
             --text-sub: #475569;
-            --primary: #0284c7; /* Premium Light Blue */
+            --primary: #0284c7;
             --primary-light: #e0f2fe;
-            --box-bg: rgba(255, 255, 255, 0.6);
+            --box-bg: rgba(255, 255, 255, 0.65);
+            --green: #10b981;
+            --red: #ef4444;
         }
 
         body {
@@ -27,82 +28,78 @@
             height: 100vh; overflow: hidden;
         }
 
-        /* 📱 Strict 9:16 Mobile View Container */
+        /* Strict 9:16 Mobile View Container */
         .phone-wrapper {
             width: 100%; max-width: 420px; height: 100vh;
             max-height: 900px; box-sizing: border-box;
-            padding: 14px; display: flex; flex-direction: column; gap: 10px;
+            padding: 12px; display: flex; flex-direction: column; gap: 8px;
             position: relative;
         }
 
-        /* 🎬 Smooth Animated Splash Screen */
+        /* Smooth Splash Screen */
         #splash {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #ffffff; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 9999;
-            transition: opacity 0.5s ease, transform 0.5s ease; border-radius: 12px;
+            transition: opacity 0.5s ease; border-radius: 12px;
         }
         .splash-title {
-            font-size: 28px; font-weight: 900; letter-spacing: 4px;
+            font-size: 30px; font-weight: 900; letter-spacing: 5px;
             background: linear-gradient(45deg, #0284c7, #38bdf8);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            opacity: 0; transform: scale(0.8);
-            animation: popIn 0.8s forwards cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
 
-        /* Top Bar */
+        /* Top Logo Bar */
         .top-bar { display: flex; justify-content: space-between; align-items: center; }
-        .logo-txt { font-weight: 800; font-size: 18px; letter-spacing: 1px; color: var(--primary); }
+        .logo-txt { font-weight: 800; font-size: 18px; color: var(--primary); letter-spacing: 0.5px; }
+        .ver-badge { font-size: 10px; background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 8px; font-weight: bold; }
 
-        /* 🔀 Premium Spot / Future Mode Selector Tabs */
+        /* Spot / Future Mode Selector Tabs */
         .trade-tabs {
             display: flex; background: rgba(2, 132, 199, 0.08); 
-            padding: 4px; border-radius: 12px; border: 1px solid var(--border);
+            padding: 3px; border-radius: 12px; border: 1px solid var(--border);
         }
         .tab-btn {
-            flex: 1; padding: 10px; border: none; background: transparent;
-            color: var(--text-sub); font-weight: 700; font-size: 13px;
-            border-radius: 8px; cursor: pointer; transition: all 0.3s ease;
+            flex: 1; padding: 8px; border: none; background: transparent;
+            color: var(--text-sub); font-weight: 700; font-size: 12px;
+            border-radius: 9px; cursor: pointer; transition: all 0.2s ease;
         }
         .tab-btn.active {
             background: #ffffff; color: var(--primary);
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.08);
         }
 
         /* Search Section */
         .search-box { display: flex; gap: 6px; }
         input {
-            flex: 1; padding: 12px; background: var(--panel);
+            flex: 1; padding: 10px 14px; background: var(--panel);
             border: 1px solid var(--border); color: var(--text);
             border-radius: 12px; font-size: 14px; text-transform: uppercase;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02); outline: none;
+            outline: none;
         }
         button#analyzeBtn {
-            padding: 12px 20px; background: var(--primary);
+            padding: 10px 18px; background: var(--primary);
             border: none; color: white; font-weight: bold;
             border-radius: 12px; cursor: pointer; font-size: 13px;
-            transition: background 0.2s;
         }
-        button#analyzeBtn:hover { background: #0369a1; }
 
         /* Chart Wrapper */
         #chart { 
-            height: 35% !important; width: 100%; border-radius: 16px; 
-            overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            height: 30% !important; width: 100%; border-radius: 16px; 
+            overflow: hidden; border: 1px solid var(--border);
         }
 
-        /* Signals Panel with Glassmorphism */
+        /* Main Scrollable Panel */
         .panel {
             background: var(--panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            padding: 14px; border-radius: 16px; border: 1px solid var(--border);
+            padding: 12px; border-radius: 16px; border: 1px solid var(--border);
             flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-            box-shadow: 0 10px 30px rgba(2, 132, 199, 0.04);
+            box-shadow: 0 8px 24px rgba(2, 132, 199, 0.03);
         }
 
         .header-row { display: flex; justify-content: space-between; align-items: center; }
-        .coin-name { font-size: 18px; font-weight: 800; }
-        .badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; letter-spacing: 0.5px; }
+        .coin-name { font-size: 17px; font-weight: 800; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 11px; }
         
         .BULLISH { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
         .BEARISH { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
@@ -110,80 +107,72 @@
 
         .alert-card {
             background: var(--box-bg); padding: 10px; border-radius: 10px;
-            font-size: 12px; line-height: 1.4; border-left: 4px solid var(--primary);
+            font-size: 11px; line-height: 1.4; border-left: 4px solid var(--primary);
         }
 
+        /* Flexible Information Grid */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .grid-item { background: var(--box-bg); padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
-        .lbl { font-size: 10px; color: var(--text-sub); font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-        .val { font-size: 13px; font-weight: 700; font-family: monospace; }
-        .green-txt { color: #10b981; }
+        .grid-item { background: var(--box-bg); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); }
+        .lbl { font-size: 9px; color: var(--text-sub); font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+        .val { font-size: 12px; font-weight: 700; font-family: monospace; }
+        
+        /* Multi-Exchange Widget */
+        .exchange-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+        .exchange-row:last-child { border: none; }
     </style>
 </head>
 <body>
 
     <div class="phone-wrapper">
-        <!-- Splash Screen -->
-        <div id="splash">
-            <div class="splash-title">NEXUS AI PRO</div>
-        </div>
+        <div id="splash"><div class="splash-title">NEXUS AI PRO</div></div>
 
         <div class="top-bar">
-            <div class="logo-txt">NEXUS AI v3.0</div>
+            <div class="logo-txt">NEXUS MULTI-ANALYZER</div>
+            <div class="ver-badge">v3.5 PRO</div>
         </div>
 
-        <!-- 📊 Spot / Future Tabs -->
         <div class="trade-tabs">
             <button class="tab-btn active" id="tab-future" onclick="switchMode('FUTURE')">FUTURE TRADING</button>
             <button class="tab-btn" id="tab-spot" onclick="switchMode('SPOT')">SPOT TRADING</button>
         </div>
 
         <div class="search-box">
-            <input type="text" id="coinInput" value="BTCUSDT" placeholder="ENTER COIN (E.G. SOLUSDT)">
+            <input type="text" id="coinInput" value="BTCUSDT">
             <button id="analyzeBtn" onclick="loadCoin()">ANALYZE</button>
         </div>
 
         <div id="chart"></div>
 
         <div class="panel" id="signalPanel">
-            <div style="text-align: center; color: var(--text-sub); padding-top: 30px;">Initializing Nexus Engine...</div>
+            <div style="text-align: center; color: var(--text-sub); padding-top: 20px;">Connecting to Nexus Engine...</div>
         </div>
     </div>
 
     <script>
         let currentCoin = "BTCUSDT";
-        let currentMode = "FUTURE"; // Default Mode
+        let currentMode = "FUTURE";
         const api_base_url = 'https://worker-production-c4493.up.railway.app/analyze';
 
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash');
-                if(splash) {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 500);
-                }
-            }, 1200);
+                if(splash) { splash.style.opacity = '0'; setTimeout(() => splash.remove(), 500); }
+            }, 1000);
         });
 
         function switchMode(mode) {
             currentMode = mode;
             document.getElementById('tab-future').classList.toggle('active', mode === 'FUTURE');
             document.getElementById('tab-spot').classList.toggle('active', mode === 'SPOT');
-            fetchSignalData(); // Refresh data for the newly selected mode
+            fetchSignalData();
         }
 
         function loadTradingView(coin) {
             document.getElementById('chart').innerHTML = ""; 
             new TradingView.widget({
-                "container_id": "chart",
-                "autosize": true,
-                "symbol": "BINANCE:" + coin,
-                "interval": "60",
-                "theme": "light", // Matched with White/Blue UI
-                "style": "1",
-                "enable_publishing": false,
-                "hide_side_toolbar": true,
-                "allow_symbol_change": true
+                "container_id": "chart", "autosize": true, "symbol": "BINANCE:" + coin,
+                "interval": "60", "theme": "light", "style": "1",
+                "hide_side_toolbar": true, "allow_symbol_change": true
             });
         }
 
@@ -193,7 +182,7 @@
                 const data = await response.json();
 
                 if (data.error) {
-                    document.getElementById('signalPanel').innerHTML = `<div style="color:#ef4444; font-weight:bold; text-align:center; padding:20px;">Symbol Error: Not supported.</div>`;
+                    document.getElementById('signalPanel').innerHTML = `<div style="color:var(--red); font-weight:bold; text-align:center; padding:20px;">Symbol Not Supported.</div>`;
                     return;
                 }
 
@@ -202,29 +191,37 @@
                 document.getElementById('signalPanel').innerHTML = `
                     <div class="header-row">
                         <div>
-                            <div class="coin-name">${data.coin} <span style="font-size:11px; color:var(--primary);">(${data.mode})</span></div>
-                            <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">Live: ${data.price} USDT</div>
+                            <div class="coin-name">${data.coin} <span style="font-size:10px; color:var(--primary);">[${data.mode}]</span></div>
+                            <div style="font-size: 11px; color: var(--text-sub); margin-top: 1px;">Live: ${data.price} USDT</div>
                         </div>
                         <span class="badge ${badgeClass}">${data.signal}</span>
                     </div>
 
-                    <div class="alert-card" style="border-left-color: ${badgeClass==='BULLISH'?'#10b981':badgeClass==='BEARISH'?'#ef4444':'#64748b'}">
+                    <div class="alert-card" style="border-left-color: ${badgeClass==='BULLISH'?'var(--green)':badgeClass==='BEARISH'?'var(--red)':'#64748b'}">
                         <b>AI INSIGHT:</b> ${data.alert}
                     </div>
 
                     <div class="grid">
                         <div class="grid-item"><div class="lbl">🎯 Entry Zone</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
                         <div class="grid-item"><div class="lbl">🛡️ Leverage</div><div class="val">${data.leverage}</div></div>
-                        <div class="grid-item"><div class="lbl">📈 Target 1 (TP1)</div><div class="val green-txt">${data.tp1}</div></div>
-                        <div class="grid-item"><div class="lbl">🛑 Stop Loss (SL)</div><div class="val" style="color:#ef4444;">${data.sl}</div></div>
-                        <div class="grid-item"><div class="lbl">📈 Target 2 (TP2)</div><div class="val green-txt">${data.tp2}</div></div>
-                        <div class="grid-item"><div class="lbl">📊 RSI Momentum</div><div class="val" style="color:#0284c7;">${data.rsi}</div></div>
-                        <div class="grid-item"><div class="lbl">📈 Target 3 (TP3)</div><div class="val green-txt">${data.tp3}</div></div>
-                        <div class="grid-item"><div class="lbl">🔀 Macro Direction</div><div class="val">${data.macro_trend}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 1 (TP1)</div><div class="val" style="color:var(--green);">${data.tp1}</div></div>
+                        <div class="grid-item"><div class="lbl">🛑 Stop Loss (SL)</div><div class="val" style="color:var(--red);">${data.sl}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 2 (TP2)</div><div class="val" style="color:var(--green);">${data.tp2}</div></div>
+                        <div class="grid-item"><div class="lbl">📊 RSI (1H)</div><div class="val">${data.rsi}</div></div>
+                        <div class="grid-item"><div class="lbl">🧠 Sentiment</div><div class="val" style="color:var(--primary);">${data.market_sentiment}</div></div>
+                        <div class="grid-item"><div class="lbl">⚡ Volatility</div><div class="val">${data.volatility}</div></div>
+                    </div>
+
+                    <!-- Massive Update: Multi-Exchange Arbitrage/Liquidity Map -->
+                    <div class="grid-item" style="margin-top:2px;">
+                        <div class="lbl">🌐 Cross-Exchange Liquidity Map (Bybit / OKX Linked)</div>
+                        <div class="exchange-row"><span>Binance Live</span><span class="val">${data.exchanges.binance} USDT</span></div>
+                        <div class="exchange-row"><span>Bybit Index</span><span class="val">${data.exchanges.bybit} USDT</span></div>
+                        <div class="exchange-row"><span>OKX Spot/Fut</span><span class="val">${data.exchanges.okx} USDT</span></div>
                     </div>
                 `;
             } catch (err) {
-                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Reconnecting to Nexus Core...</div>`;
+                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">Nexus Core Offline. Syncing...</div>`;
             }
         }
 
@@ -237,10 +234,9 @@
             fetchSignalData();
         }
 
-        // Bootstrap
         loadTradingView(currentCoin);
         fetchSignalData();
-        setInterval(fetchSignalData, 12000);
+        setInterval(fetchSignalData, 10000); // 10 Sec Background Fast-sync
     </script>
 </body>
 </html>
