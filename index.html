@@ -3,321 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus Matrix Engine v5.0</title>
+    <title>Nexus AI Premium Terminal</title>
     <script src="https://s3.tradingview.com/tv.js"></script>
     <style>
+        /* CSS Variables for Dynamic Theme Switching */
         :root {
-            --bg: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
-            --panel: rgba(255, 255, 255, 0.85);
-            --border: rgba(2, 132, 199, 0.15);
+            --bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --panel: rgba(255, 255, 255, 0.8);
+            --border: rgba(255, 255, 255, 0.6);
             --text: #0f172a;
             --text-sub: #475569;
-            --primary: #0284c7;
-            --box-bg: rgba(241, 245, 249, 0.75);
-            --green: #059669;
-            --red: #dc2626;
-            --orange: #ea580c;
-            --shadow: 0 8px 32px 0 rgba(2, 132, 199, 0.08);
-            --blur: blur(16px);
+            --primary: #2563eb;
+            --box-bg: rgba(255, 255, 255, 0.6);
         }
-        .dark-theme {
-            --bg: linear-gradient(135deg, #020617 0%, #0f172a 60%, #1e1b4b 100%);
-            --panel: rgba(15, 23, 42, 0.85);
-            --border: rgba(56, 189, 248, 0.2);
+        [data-theme="dark"] {
+            --bg: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            --panel: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.05);
             --text: #f8fafc;
             --text-sub: #94a3b8;
-            --primary: #38bdf8;
-            --box-bg: rgba(30, 41, 59, 0.7);
-            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --primary: #3b82f6;
+            --box-bg: rgba(15, 23, 42, 0.6);
         }
+
         body {
             background: var(--bg);
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            min-height: 100vh;
-            transition: background 0.4s ease, color 0.4s ease;
-            -webkit-font-smoothing: antialiased;
+            margin: 0; padding: 0;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
         }
+
+        /* 📱 Emulating Strict 9:16 Mobile View Container */
         .phone-wrapper {
-            width: 100%;
-            max-width: 430px;
-            height: 100vh;
-            max-height: 932px;
-            box-sizing: border-box;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin: auto;
+            width: 100%; max-width: 420px; height: 100vh;
+            max-height: 900px; box-sizing: border-box;
+            padding: 12px; display: flex; flex-direction: column; gap: 8px;
             position: relative;
         }
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: var(--blur);
-            -webkit-backdrop-filter: var(--blur);
-            padding: 4px 0;
+
+        /* 🎬 Premium Animated Splash Screen */
+        #splash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999;
+            transition: opacity 0.6s ease, transform 0.6s ease; border-radius: 12px;
         }
-        .logo-txt {
-            font-weight: 900;
-            font-size: 20px;
-            color: var(--primary);
-            letter-spacing: 0.8px;
-            text-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+        .splash-title {
+            font-size: 26px; font-weight: 900; letter-spacing: 3px;
+            background: linear-gradient(45deg, #3b82f6, #60a5fa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            opacity: 0; transform: scale(0.8);
+            animation: popIn 1s forwards cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .theme-btn {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 800;
-            cursor: pointer;
-            color: var(--text);
-            box-shadow: var(--shadow);
-            transition: all 0.2s;
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+
+        /* Top Bar & Theme Toggle */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .logo-txt { font-weight: 800; font-size: 16px; letter-spacing: 1px; color: var(--primary); }
+        .theme-btn { 
+            background: var(--panel); border: 1px solid var(--border); 
+            padding: 6px 12px; border-radius: 20px; color: var(--text);
+            font-size: 11px; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px);
         }
-        .theme-btn:active { transform: scale(0.95); }
-        .trade-tabs {
-            display: flex;
-            background: rgba(2, 132, 199, 0.08);
-            padding: 4px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            backdrop-filter: var(--blur);
-            -webkit-backdrop-filter: var(--blur);
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: transparent;
-            color: var(--text-sub);
-            font-weight: 800;
-            font-size: 13px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .tab-btn.active {
-            background: var(--panel);
-            color: var(--primary);
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15);
-        }
-        .search-box { display: flex; gap: 8px; }
+
+        /* Search Section */
+        .search-box { display: flex; gap: 6px; }
         input {
-            flex: 1;
-            padding: 14px 18px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 16px;
-            font-size: 15px;
-            text-transform: uppercase;
-            outline: none;
-            font-weight: 700;
-            box-shadow: var(--shadow);
-            transition: border 0.2s;
+            flex: 1; padding: 12px; background: var(--panel);
+            border: 1px solid var(--border); color: var(--text);
+            border-radius: 12px; font-size: 14px; text-transform: uppercase;
+            backdrop-filter: blur(10px);
         }
-        input:focus { border-color: var(--primary); }
-        button#analyzeBtn {
-            padding: 14px 24px;
-            background: var(--primary);
-            border: none;
-            color: white;
-            font-weight: 900;
-            border-radius: 16px;
-            cursor: pointer;
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
-            transition: all 0.2s;
+        button {
+            padding: 12px 16px; background: var(--primary);
+            border: none; color: white; font-weight: bold;
+            border-radius: 12px; cursor: pointer; font-size: 13px;
         }
-        button#analyzeBtn:active { transform: scale(0.96); }
-        #chart {
-            height: 34% !important;
-            width: 100%;
-            border-radius: 22px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
+
+        /* Chart Wrapper */
+        #chart { 
+            height: 38% !important; width: 100%; border-radius: 14px; 
+            overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         }
+
+        /* Signals Panel */
         .panel {
-            background: var(--panel);
-            backdrop-filter: var(--blur);
-            -webkit-backdrop-filter: var(--blur);
-            padding: 16px;
-            border-radius: 24px;
-            border: 1px solid var(--border);
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: var(--shadow);
-            scrollbar-width: none;
+            background: var(--panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 14px; border-radius: 16px; border: 1px solid var(--border);
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
         }
-        .panel::-webkit-scrollbar { display: none; }
+
         .header-row { display: flex; justify-content: space-between; align-items: center; }
-        .coin-name { font-size: 20px; font-weight: 900; letter-spacing: -0.3px; }
-        .badge { padding: 8px 16px; border-radius: 30px; font-weight: 900; font-size: 11px; letter-spacing: 0.3px; text-transform: uppercase; }
-        .BULLISH { background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.2); }
-        .BEARISH { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); }
-        .NEUTRAL { background: rgba(100, 116, 139, 0.15); color: var(--text-sub); border: 1px solid rgba(100, 116, 139, 0.2); }
+        .coin-name { font-size: 18px; font-weight: 800; }
+        .badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; letter-spacing: 0.5px; }
+        
+        .BULLISH { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .BEARISH { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        .NEUTRAL, .EXHAUSTED { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        [data-theme="dark"] .NEUTRAL, [data-theme="dark"] .EXHAUSTED { background: #334155; color: #f1f5f9; border: 1px solid #475569; }
+
         .alert-card {
-            background: var(--box-bg);
-            padding: 14px;
-            border-radius: 16px;
-            font-size: 13px;
-            border-left: 4.5px solid var(--primary);
-            font-weight: 700;
-            line-height: 1.5;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            background: var(--box-bg); padding: 10px; border-radius: 10px;
+            font-size: 12px; line-height: 1.4; border-left: 4px solid var(--primary);
         }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .grid-item {
-            background: var(--box-bg);
-            padding: 12px 14px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            transition: transform 0.2s;
-        }
-        .lbl { font-size: 10px; color: var(--text-sub); font-weight: 800; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.2px; }
-        .val { font-size: 14px; font-weight: 900; font-family: 'SF Mono', Menlo, monospace; }
-        .fade-in { animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .grid-item { background: var(--box-bg); padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+        .lbl { font-size: 10px; color: var(--text-sub); font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+        .val { font-size: 13px; font-weight: 700; font-family: monospace; }
+        .green-txt { color: #10b981; }
     </style>
 </head>
-<body>
+<body data-theme="dark">
 
     <div class="phone-wrapper">
-        <div class="top-bar">
-            <div class="logo-txt">NEXUS AI v5.0</div>
-            <button class="theme-btn" onclick="toggleTheme()">Theme 🌓</button>
+        <div id="splash">
+            <div class="splash-title">NEXUS AI SIGNAL</div>
         </div>
 
-        <div class="trade-tabs">
-            <button class="tab-btn active" id="tab-future" onclick="switchMode('FUTURE')">FUTURE COINS</button>
-            <button class="tab-btn" id="tab-spot" onclick="switchMode('SPOT')">SPOT COINS</button>
+        <div class="top-bar">
+            <div class="logo-txt">NEXUS AI v2.0</div>
+            <button class="theme-btn" onclick="toggleTheme()">SWITCH THEME</button>
         </div>
 
         <div class="search-box">
-            <input type="text" id="coinInput" value="BTCUSDT.P">
-            <button id="analyzeBtn" onclick="loadCoin()">ANALYZE</button>
+            <input type="text" id="coinInput" value="BTCUSDT" placeholder="ENTER COIN (E.G. SOLUSDT)">
+            <button onclick="loadCoin()">ANALYZE</button>
         </div>
 
         <div id="chart"></div>
 
-        <div class="panel" id="mainPanel"></div>
+        <div class="panel" id="signalPanel">
+            <div style="text-align: center; color: var(--text-sub); padding-top: 30px;">Initializing System Engine...</div>
+        </div>
     </div>
 
     <script>
-        let currentCoin = "BTCUSDT.P";
-        let currentMode = "FUTURE";
-        let isDark = false;
-        const api_base_url = 'https://worker-production-c4493.up.railway.app';
+        let currentCoin = "BTCUSDT";
+        let currentTheme = "dark";
+        const api_base_url = 'https://worker-production-c4493.up.railway.app/analyze';
+
+        // ⏳ Splash screen removal
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash');
+                if(splash) {
+                    splash.style.opacity = '0';
+                    setTimeout(() => splash.remove(), 600);
+                }
+            }, 1800);
+        });
 
         function toggleTheme() {
-            isDark = !isDark;
-            document.body.classList.toggle('dark-theme', isDark);
-            loadTradingView(currentCoin);
-        }
-
-        function switchMode(mode) {
-            currentMode = mode;
-            document.getElementById('tab-future').classList.toggle('active', mode === 'FUTURE');
-            document.getElementById('tab-spot').classList.toggle('active', mode === 'SPOT');
-            fetchAnalysisData();
-        }
-
-        function cleanUiInputForTv(coin) {
-            let clean = coin.toUpperCase().trim();
-            if (clean.includes(":")) clean = clean.split(":")[1];
-            if (clean.includes(".")) clean = clean.split(".")[0];
-            return "BINANCE:" + clean; 
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', currentTheme);
+            loadTradingView(currentCoin); // Reload chart with new theme configuration
         }
 
         function loadTradingView(coin) {
-            document.getElementById('chart').innerHTML = ""; 
+            document.getElementById('chart').innerHTML = ""; // Reset chart container
             new TradingView.widget({
-                "container_id": "chart", "autosize": true, "symbol": cleanUiInputForTv(coin),
-                "interval": "60", "theme": isDark ? "dark" : "light", "style": "1",
-                "hide_side_toolbar": true, "allow_symbol_change": true
+                "container_id": "chart",
+                "autosize": true,
+                "symbol": "BINANCE:" + coin,
+                "interval": "60",
+                "theme": currentTheme,
+                "style": "1",
+                "enable_publishing": false,
+                "hide_side_toolbar": true,
+                "allow_symbol_change": true
             });
         }
 
-        async function fetchAnalysisData() {
+        async function fetchSignalData() {
             try {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:30px; font-weight:700;">Processing 10-Indicator Array...</div>`;
-                
-                const res = await fetch(`${api_base_url}/analyze?coin=${encodeURIComponent(currentCoin)}&mode=${currentMode}`);
-                if (!res.ok) throw new Error("Network Response State Error");
-                
-                const data = await res.json();
+                const response = await fetch(`${api_base_url}?coin=${currentCoin}`);
+                const data = await response.json();
 
-                let isBull = data.status.includes('BULLISH');
-                let isBear = data.status.includes('BEARISH');
-                let badgeClass = isBull ? 'BULLISH' : (isBear ? 'BEARISH' : 'NEUTRAL');
-                
-                let alertColor = data.alert.includes('PUMP') ? 'var(--green)' : (data.alert.includes('RISK') ? 'var(--red)' : 'var(--primary)');
-                let managementColor = data.live_management.includes('EMERGENCY') ? 'var(--red)' : (data.live_management.includes('HOLD') ? 'var(--green)' : 'var(--orange)');
+                if (data.error) {
+                    document.getElementById('signalPanel').innerHTML = `<div style="color:#ef4444; font-weight:bold; text-align:center; padding:20px;">Symbol Error: Not supported.</div>`;
+                    return;
+                }
 
-                document.getElementById('mainPanel').innerHTML = `
-                    <div class="fade-in" style="display:flex; flex-direction:column; gap:11px;">
-                        <div class="header-row">
-                            <div>
-                                <div class="coin-name">${data.coin}</div>
-                                <div style="font-size:12px; color:var(--text-sub); margin-top:2px; font-weight:600;">Index Valuation: <b style="color:var(--text);">$${data.price}</b></div>
-                            </div>
-                            <span class="badge ${badgeClass}">${data.signal}</span>
+                let badgeClass = data.status;
+
+                document.getElementById('signalPanel').innerHTML = `
+                    <div class="header-row">
+                        <div>
+                            <div class="coin-name">${data.coin}</div>
+                            <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">Live: ${data.price} USDT</div>
                         </div>
+                        <span class="badge ${badgeClass}">${data.signal}</span>
+                    </div>
 
-                        <div class="alert-card" style="border-left-color: ${alertColor}; background: rgba(2, 132, 199, 0.03);">
-                            <div style="font-size:10px; color:var(--text-sub); font-weight:800; margin-bottom:3px; letter-spacing:0.3px;">VOLUMETRIC METRIC MATRIX:</div>
-                            ${data.alert}
-                        </div>
+                    <div class="alert-card" style="border-left-color: ${badgeClass==='BULLISH'?'#10b981':badgeClass==='BEARISH'?'#ef4444':'#64748b'}">
+                        <b>AI INSIGHT:</b> ${data.alert}
+                    </div>
 
-                        <div class="alert-card" style="border-left-color: ${managementColor};">
-                            <div style="font-size:10px; color:var(--text-sub); font-weight:800; margin-bottom:3px; letter-spacing:0.3px;">LIVE ORDER MANAGEMENT:</div>
-                            <span style="color:${managementColor}; font-weight:900;">${data.live_management}</span>
-                        </div>
-
-                        <div class="grid">
-                            <div class="grid-item"><div class="lbl">🎯 Optimal Entry</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
-                            <div class="grid-item"><div class="lbl">🛡️ Leverage Limit</div><div class="val">${data.leverage}</div></div>
-                            <div class="grid-item"><div class="lbl">📈 Target TakeProfit 1</div><div class="val" style="color:var(--green);">${data.tp1}</div></div>
-                            <div class="grid-item"><div class="lbl">🛑 Risk StopLoss (SL)</div><div class="val" style="color:var(--red);">${data.sl}</div></div>
-                            <div class="grid-item"><div class="lbl">📈 Target TakeProfit 2</div><div class="val" style="color:var(--green);">${data.tp2}</div></div>
-                            <div class="grid-item"><div class="lbl">🔍 Signal Precision</div><div class="val" style="font-size:11.5px;">${data.confidence}</div></div>
-                        </div>
-
-                        <div style="font-size:11px; text-align:center; color:var(--text-sub); font-weight:700; background:var(--box-bg); padding:8px; border-radius:12px; border: 1px solid var(--border);">
-                            📊 Core Evaluation: ${data.indicator_score} (10 Data Waves Checked)
-                        </div>
+                    <div class="grid">
+                        <div class="grid-item"><div class="lbl">🎯 Entry Zone</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
+                        <div class="grid-item"><div class="lbl">🛡️ Leverage</div><div class="val">${data.leverage}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 1 (TP1)</div><div class="val green-txt">${data.tp1}</div></div>
+                        <div class="grid-item"><div class="lbl">🛑 Stop Loss (SL)</div><div class="val" style="color:#ef4444;">${data.sl}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 2 (TP2)</div><div class="val green-txt">${data.tp2}</div></div>
+                        <div class="grid-item"><div class="lbl">📊 RSI Momentum</div><div class="val" style="color:#0284c7;">${data.rsi}</div></div>
+                        <div class="grid-item"><div class="lbl">📈 Target 3 (TP3)</div><div class="val green-txt">${data.tp3}</div></div>
+                        <div class="grid-item"><div class="lbl">🔀 Macro Direction</div><div class="val">${data.macro_trend}</div></div>
                     </div>
                 `;
             } catch (err) {
-                document.getElementById('mainPanel').innerHTML = `
-                    <div style="color:var(--red); text-align:center; padding:30px; font-weight:700;">
-                        Server Pipeline Invalidation State.<br>
-                        <button onclick="fetchAnalysisData()" style="margin-top:12px; padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:12px; font-weight:800; cursor:pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);">RETRIGGER CONFLUENCE</button>
-                    </div>`;
+                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Reconnecting to Nexus Core Architecture...</div>`;
             }
         }
 
         function loadCoin() {
-            let val = document.getElementById('coinInput').value.trim();
-            if(!val) return;
-            currentCoin = val;
+            let value = document.getElementById('coinInput').value.trim().toUpperCase();
+            if(!value) return;
+            if(!value.endsWith("USDT") && !value.includes("-")) value += "USDT";
+            currentCoin = value;
             loadTradingView(currentCoin);
-            fetchAnalysisData();
+            fetchSignalData();
         }
 
-        // Execution Init
+        // Bootstrapping Terminal
         loadTradingView(currentCoin);
-        fetchAnalysisData();
+        fetchSignalData();
+        setInterval(fetchSignalData, 12000); // Efficient background syncing every 12 seconds
     </script>
 </body>
 </html>
