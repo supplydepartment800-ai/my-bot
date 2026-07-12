@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus AI Analyzer v4.6</title>
+    <title>Nexus AI Analyzer v4.7</title>
     <script src="https://s3.tradingview.com/tv.js"></script>
     <style>
         :root {
@@ -16,6 +16,7 @@
             --box-bg: rgba(248, 250, 252, 0.8);
             --green: #10b981;
             --red: #ef4444;
+            --orange: #f59e0b;
         }
         .dark-theme {
             --bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
@@ -32,7 +33,7 @@
         .logo-txt { font-weight: 900; font-size: 18px; color: var(--primary); letter-spacing: 0.5px; }
         .theme-btn { background: var(--panel); border: 1px solid var(--border); padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text); }
         .trade-tabs { display: flex; background: rgba(2, 132, 199, 0.06); padding: 4px; border-radius: 14px; border: 1px solid var(--border); }
-        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-sub); font-weight: 700; font-size: 12px; border-radius: 10px; cursor: pointer; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-sub); font-weight: 700; font-size: 13px; border-radius: 10px; cursor: pointer; }
         .tab-btn.active { background: var(--panel); color: var(--primary); box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08); }
         .search-box { display: flex; gap: 6px; }
         input { flex: 1; padding: 12px 16px; background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 14px; font-size: 14px; text-transform: uppercase; outline: none; font-weight: 600; }
@@ -45,17 +46,12 @@
         .badge { padding: 6px 14px; border-radius: 30px; font-weight: 800; font-size: 11px; text-transform: uppercase; }
         .BULLISH { background: #e6fbf1; color: #047857; }
         .BEARISH { background: #fff5f5; color: #b91c1c; }
-        .alert-card { background: var(--box-bg); padding: 12px; border-radius: 12px; font-size: 12px; border-left: 4px solid var(--primary); font-weight: 500; }
+        .NEUTRAL { background: #f1f5f9; color: #475569; }
+        .alert-card { background: var(--box-bg); padding: 12px; border-radius: 12px; font-size: 12px; border-left: 4px solid var(--primary); font-weight: 600; line-height: 1.4; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .grid-item { background: var(--box-bg); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); }
         .lbl { font-size: 9px; color: var(--text-sub); font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
         .val { font-size: 13px; font-weight: 800; font-family: monospace; }
-        
-        .sig-card { background: var(--box-bg); border: 1px solid var(--border); padding: 12px; border-radius: 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
-        .sig-row { display: flex; justify-content: space-between; align-items: center; }
-        .sig-badge { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; }
-        .sig-long { background: rgba(16, 185, 129, 0.15); color: var(--green); }
-        .sig-short { background: rgba(239, 68, 68, 0.15); color: var(--red); }
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -64,18 +60,17 @@
 
     <div class="phone-wrapper">
         <div class="top-bar">
-            <div class="logo-txt">NEXUS AI v4.6</div>
+            <div class="logo-txt">NEXUS AI v4.7</div>
             <button class="theme-btn" onclick="toggleTheme()">Theme 🌓</button>
         </div>
 
         <div class="trade-tabs">
-            <button class="tab-btn active" id="tab-future" onclick="switchMode('FUTURE')">FUTURE</button>
-            <button class="tab-btn" id="tab-spot" onclick="switchMode('SPOT')">SPOT</button>
-            <button class="tab-btn" id="tab-signals" onclick="switchMode('SIGNALS')">⚡ SIGNALS</button>
+            <button class="tab-btn active" id="tab-future" onclick="switchMode('FUTURE')">FUTURE COINS</button>
+            <button class="tab-btn" id="tab-spot" onclick="switchMode('SPOT')">SPOT COINS</button>
         </div>
 
-        <div id="searchSection" class="search-box">
-            <input type="text" id="coinInput" value="TACUSDT.P">
+        <div class="search-box">
+            <input type="text" id="coinInput" value="BTCUSDT.P">
             <button id="analyzeBtn" onclick="loadCoin()">ANALYZE</button>
         </div>
 
@@ -85,35 +80,22 @@
     </div>
 
     <script>
-        let currentCoin = "TACUSDT.P";
+        let currentCoin = "BTCUSDT.P";
         let currentMode = "FUTURE";
         let isDark = false;
-        
-        // ⚠️ මෙතනට ඔයාගේ HTTPS සහිත නිවැරදි Railway URL එක දාන්න
         const api_base_url = 'https://worker-production-c4493.up.railway.app';
 
         function toggleTheme() {
             isDark = !isDark;
             document.body.classList.toggle('dark-theme', isDark);
-            if(currentMode !== 'SIGNALS') loadTradingView(currentCoin);
+            loadTradingView(currentCoin);
         }
 
         function switchMode(mode) {
             currentMode = mode;
             document.getElementById('tab-future').classList.toggle('active', mode === 'FUTURE');
             document.getElementById('tab-spot').classList.toggle('active', mode === 'SPOT');
-            document.getElementById('tab-signals').classList.toggle('active', mode === 'SIGNALS');
-
-            if(mode === 'SIGNALS') {
-                document.getElementById('chart').style.display = 'none';
-                document.getElementById('searchSection').style.display = 'none';
-                fetchTopSignals();
-            } else {
-                document.getElementById('chart').style.display = 'block';
-                document.getElementById('searchSection').style.display = 'flex';
-                loadTradingView(currentCoin);
-                fetchAnalysisData();
-            }
+            fetchAnalysisData();
         }
 
         function cleanUiInputForTv(coin) {
@@ -134,68 +116,54 @@
 
         async function fetchAnalysisData() {
             try {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Analyzing Chart Matrix...</div>`;
+                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Computing 10-Indicator Matrix...</div>`;
                 const res = await fetch(`${api_base_url}/analyze?coin=${encodeURIComponent(currentCoin)}&mode=${currentMode}`);
                 const data = await res.json();
 
-                let isBull = data.status === 'BULLISH';
+                let isBull = data.status.includes('BULLISH');
+                let isBear = data.status.includes('BEARISH');
+                let badgeClass = isBull ? 'BULLISH' : (isBear ? 'BEARISH' : 'NEUTRAL');
+                
+                // Color formatting for alert types
+                let alertColor = data.alert.includes('PUMP') ? 'var(--green)' : (data.alert.includes('RISK') ? 'var(--red)' : 'var(--primary)');
+                let managementColor = data.live_management.includes('EMERGENCY') ? 'var(--red)' : (data.live_management.includes('HOLD') ? 'var(--green)' : 'var(--orange)');
+
                 document.getElementById('mainPanel').innerHTML = `
-                    <div class="fade-in" style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="fade-in" style="display:flex; flex-direction:column; gap:9px;">
                         <div class="header-row">
                             <div>
                                 <div class="coin-name">${data.coin}</div>
-                                <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">Engine: ${data.company_name}</div>
+                                <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">Live Price: <b>$${data.price}</b></div>
                             </div>
-                            <span class="badge ${isBull?'BULLISH':'BEARISH'}">${data.signal}</span>
+                            <span class="badge ${badgeClass}">${data.signal}</span>
                         </div>
-                        <div class="alert-card" style="border-left-color: ${isBull?'var(--green)':'var(--red)'}">
-                            <b>SIGNAL NOTE:</b> ${data.alert}
+
+                        <div class="alert-card" style="border-left-color: ${alertColor}; background: rgba(15, 23, 42, 0.03);">
+                            <div style="font-size:10px; color:var(--text-sub); font-weight:700; margin-bottom:2px;">VOLUMETRIC PROJECTION:</div>
+                            ${data.alert}
                         </div>
+
+                        <div class="alert-card" style="border-left-color: ${managementColor};">
+                            <div style="font-size:10px; color:var(--text-sub); font-weight:700; margin-bottom:2px;">LIVE MANAGEMENT UPDATE:</div>
+                            <span style="color:${managementColor}; font-weight:800;">${data.live_management}</span>
+                        </div>
+
                         <div class="grid">
-                            <div class="grid-item"><div class="lbl">🎯 Entry Zone</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
-                            <div class="grid-item"><div class="lbl">🛡️ Leverage</div><div class="val">${data.leverage}</div></div>
-                            <div class="grid-item"><div class="lbl">📈 Target 1</div><div class="val" style="color:var(--green);">${data.tp1}</div></div>
-                            <div class="grid-item"><div class="lbl">🛑 Stop Loss</div><div class="val" style="color:var(--red);">${data.sl}</div></div>
-                            <div class="grid-item"><div class="lbl">📈 Target 2</div><div class="val" style="color:var(--green);">${data.tp2}</div></div>
-                            <div class="grid-item"><div class="lbl">📊 RSI Matrix</div><div class="val">${data.rsi}</div></div>
+                            <div class="grid-item"><div class="lbl">🎯 Target Entry</div><div class="val" style="color:var(--primary);">${data.entry_zone}</div></div>
+                            <div class="grid-item"><div class="lbl">🛡️ Safe Leverage</div><div class="val">${data.leverage}</div></div>
+                            <div class="grid-item"><div class="lbl">📈 Profit Target 1</div><div class="val" style="color:var(--green);">${data.tp1}</div></div>
+                            <div class="grid-item"><div class="lbl">🛑 Stop Loss (SL)</div><div class="val" style="color:var(--red);">${data.sl}</div></div>
+                            <div class="grid-item"><div class="lbl">📈 Profit Target 2</div><div class="val" style="color:var(--green);">${data.tp2}</div></div>
+                            <div class="grid-item"><div class="lbl">🔍 Signal Strength</div><div class="val" style="font-size:11px;">${data.confidence}</div></div>
+                        </div>
+
+                        <div style="font-size:11px; text-align:center; color:var(--text-sub); font-weight:600; background:var(--box-bg); padding:6px; border-radius:8px;">
+                            📊 Analysis Engine Score: ${data.indicator_score}
                         </div>
                     </div>
                 `;
             } catch (err) {
                 document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Connection failed. Check Backend API.</div>`;
-            }
-        }
-
-        async function fetchTopSignals() {
-            try {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:20px;">Scanning Future Markets...</div>`;
-                
-                const res = await fetch(`${api_base_url}/top-signals`);
-                const data = await res.json();
-
-                let htmlContent = `<div class="fade-in" style="display:flex; flex-direction:column; gap:8px;">
-                    <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:4px;">🔥 AI RECOMMENDED FUTURE TRADES</div>`;
-                
-                data.signals.forEach(sig => {
-                    let isLong = sig.type.includes("LONG");
-                    htmlContent += `
-                        <div class="sig-card">
-                            <div class="sig-row">
-                                <span style="font-weight:900; font-size:15px;">${sig.pair}</span>
-                                <span class="sig-badge ${isLong?'sig-long':'sig-short'}">${sig.type}</span>
-                            </div>
-                            <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-top:4px;">
-                                <div><div class="lbl">Entry</div><div class="val" style="font-size:11px;">${sig.entry}</div></div>
-                                <div><div class="lbl">Target TP</div><div class="val" style="font-size:11px; color:var(--green);">${sig.tp}</div></div>
-                                <div><div class="lbl">Stop Loss</div><div class="val" style="font-size:11px; color:var(--red);">${sig.sl}</div></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                htmlContent += `</div>`;
-                document.getElementById('mainPanel').innerHTML = htmlContent;
-            } catch (err) {
-                document.getElementById('mainPanel').innerHTML = `<div style="color:var(--red); text-align:center; padding:20px;">Unable to fetch market signals.</div>`;
             }
         }
 
