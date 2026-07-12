@@ -20,10 +20,18 @@ def calculate_rsi(df, periods=14):
     return 100 - (100 / (1 + rsi))
 
 def clean_coin_name(coin):
-    """TradingView Prefix සහ අනවශ්‍ය කෑලි සම්පූර්ණයෙන්ම ඉවත් කර පිරිසිදු කිරීම"""
+    """TradingView Prefix, .P, .PERP සහ අනවශ්‍ය සියලුම දේ ඉවත් කර කාසියේ නම පිරිසිදු කිරීම"""
     coin = coin.upper().strip()
+    
+    # 1. BINANCE:LABUSDT වැනි Prefix අයින් කිරීම
     if ":" in coin:
-        coin = coin.split(":")[-1] # BINANCE:LABUSDT -> LABUSDT බවට පත් කරයි
+        coin = coin.split(":")[-1]
+        
+    # 2. LABUSDT.P හෝ BTCUSDT.PERP වල තිත සහ පිටුපස කෑලි අයින් කිරීම (.P -> ඉවත් වේ)
+    if "." in coin:
+        coin = coin.split(".")[0]
+        
+    # 3. USDT සහ අනෙකුත් අනවශ්‍ය කොටස් ඉවත් කිරීම
     coin = coin.replace('USDT', '').replace('1000', '').replace('-', '')
     return coin
 
@@ -32,12 +40,12 @@ def analyze_coin():
     raw_coin = request.args.get('coin', 'BTCUSDT').upper().strip()
     mode = request.args.get('mode', 'FUTURE').upper().strip()
     
-    # පිරිසිදු කළ නම ලබා ගැනීම
+    # පිරිසිදු කළ නම ලබා ගැනීම (e.g. LABUSDT.P -> LAB)
     base_coin = clean_coin_name(raw_coin)
     display_name = f"{base_coin}USDT"
     yf_symbol = f"{base_coin}-USD"
 
-    # Default fallback structural values (Never crash policy)
+    # Default fallback values (Never crash policy)
     price = 0.4524 if "LAB" in base_coin else random.uniform(1.0, 2.5)
     rsi_1h = 52.0
     rsi_15m = 48.0
