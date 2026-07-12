@@ -1,155 +1,104 @@
 import os
-import random
-import math
-import hashlib
-from flask import Flask, jsonify, request, make_response
+import pandas as pd
+import yfinance as yf
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
-def clean_coin_name(coin):
-    coin = coin.upper().strip()
-    if ":" in coin: coin = coin.split(":")[-1]
-    if "." in coin: coin = coin.split(".")[0]
-    return coin.replace('USDT', '').replace('1000', '').replace('-', '')
+def calculate_rsi(df, periods=14):
+    close_delta = df['Close'].diff()
+    up = close_delta.clip(lower=0)
+    down = -1 * close_delta.clip(upper=0)
+    ma_up = up.ewm(com=periods - 1, adjust=False).mean()
+    ma_down = down.ewm(com=periods - 1, adjust=False).mean()
+    rsi = ma_up / ma_down
+    return 100 - (100 / (1 + rsi))
 
-def generate_deterministic_matrix(coin_name, seed_offset=0):
-    """
-    Advanced Mathematical Fail-Safe Engine.
-    Generates deeply calculated technical indicators if the live network drops.
-    """
-    hash_object = hashlib.sha256((coin_name + str(seed_offset)).encode())
-    hash_hex = hash_object.hexdigest()
-    int_seeds = [int(hash_hex[i:i+4], 16) for i in range(0, len(hash_hex), 4)]
-    
-    rsi = 30 + (int_seeds[0] % 45)
-    adx = 15 + (int_seeds[1] % 35)
-    cci = -150 + (int_seeds[2] % 300)
-    stoch = 20 + (int_seeds[3] % 60)
-    macd = -2.5 + ((int_seeds[4] % 500) / 100)
-    signal_line = -2.0 + ((int_seeds[5] % 400) / 100)
-    
-    buy_v = 3 + (int_seeds[6] % 12)
-    sell_v = 2 + (int_seeds[7] % 10)
-    neut_v = 1 + (int_seeds[8] % 5)
-    
-    return {
-        "rsi": rsi, "adx": adx, "cci": cci, "stoch": stoch,
-        "macd": macd, "signal_line": signal_line,
-        "buy": buy_v, "sell": sell_v, "neut": neut_v
-    }
-
-@app.route('/analyze', methods=['GET', 'OPTIONS'])
+@app.route('/analyze')
 def analyze_coin():
-    if request.method == 'OPTIONS':
-        response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-        return response
+    coin = request.args.get('coin', 'BTCUSDT').upper().strip()
+    base_coin = coin.replace('USDT', '')
+    yf_symbol = f"{base_coin}-USD"
 
-    raw_coin = request.args.get('coin', 'BTCUSDT').upper().strip()
-    mode = request.args.get('mode', 'FUTURE').upper().strip()
-    
-    base_coin = clean_coin_name(raw_coin)
-    display_name = f"{base_coin}USDT"
-
-    # Base Price Anchor Arrays
-    if "TAC" in base_coin: price = 0.00336
-    elif "LAB" in base_coin: price = 0.4680
-    elif "BTC" in base_coin: price = random.uniform(63000, 65500)
-    elif "ETH" in base_coin: price = random.uniform(3200, 3450)
-    elif "SOL" in base_coin: price = random.uniform(140, 165)
-    else: price = random.uniform(0.5, 250.0)
-
-    # Core 10-Indicator Layer Calculation
-    matrix = generate_deterministic_matrix(base_coin, seed_offset=102)
-    rsi, adx, cci, stoch = matrix["rsi"], matrix["adx"], matrix["cci"], matrix["stoch"]
-    macd, sig = matrix["macd"], matrix["signal_line"]
-    buy_votes, sell_votes, neutral_votes = matrix["buy"], matrix["sell"], matrix["neut"]
-
-    # Live TradingView TA Stream Integration
     try:
-        from tradingview_ta import TA_Handler, Interval
-        handler = TA_Handler(symbol=display_name, screener="crypto", exchange="BINANCE", interval=Interval.INTERVAL_1_HOUR)
-        analysis = handler.get_analysis()
+        ticker = yf.Ticker(yf_symbol)
+        # Fetching 1H history to analyze short, medium and macro trends together
+        hist = ticker.history(period="1mo", interval="1h")
         
-        price = float(analysis.indicators.get("close", price))
-        rsi = float(analysis.indicators.get("RSI", rsi))
-        adx = float(analysis.indicators.get("ADX", adx))
-        cci = float(analysis.indicators.get("CCI20", cci))
-        stoch = float(analysis.indicators.get("Stoch.K", stoch))
-        macd = float(analysis.indicators.get("MACD.macd", macd))
-        sig = float(analysis.indicators.get("MACD.signal", sig))
+        if hist.empty or len(hist) < 200:
+            hist = ticker.history(period="3mo", interval="1d")
+            
+        if hist.empty:
+            return jsonify({"error": "Coin not found globally"}), 404
+
+        price = round(hist['Close'].iloc[-1], 4)
         
-        summary = analysis.summary
-        buy_votes = int(summary.get("BUY", buy_votes))
-        sell_votes = int(summary.get("SELL", sell_votes))
-        neutral_votes = int(summary.get("NEUTRAL", neutral_votes))
-    except Exception:
-        pass  # Seamlessly uses Mathematical Predictive Engine on error
+        # Multi-Timeframe Technical Metrics
+        hist['RSI'] = calculate_rsi(hist)
+        current_rsi = round(hist['RSI'].iloc[-1], 2)
+        
+        hist['SMA50'] = hist['Close'].rolling(window=50).mean()   # Intermediate Trend (4H equivalence)
+        hist['SMA200'] = hist['Close'].rolling(window=200).mean() # Macro Trend (1D equivalence)
+        
+        sma50 = hist['SMA50'].iloc[-1]
+        sma200 = hist['SMA200'].iloc[-1]
 
-    total_votes = buy_votes + sell_votes + neutral_votes
-    buy_ratio = buy_votes / total_votes if total_votes > 0 else 0.5
-
-    # Target Matrix Calculations
-    if buy_ratio >= 0.62:
-        side = "BUY LIMIT (LONG)" if mode == "FUTURE" else "BUY (SPOT)"
-        status = "STRONG BULLISH"
-    elif buy_ratio <= 0.38:
-        side = "SELL LIMIT (SHORT)" if mode == "FUTURE" else "WAIT / BEARISH"
-        status = "STRONG BEARISH"
-    else:
-        side = "WAIT / SIDEWAYS"
+        # Initialization
+        side = "WAIT / NO SIGNAL"
+        entry_zone = "No Trade Zone"
+        tp1, tp2, tp3, sl = 0, 0, 0, 0
+        alert = "Market is consolidating. Waiting for verified multi-timeframe confirmation."
         status = "NEUTRAL"
 
-    # Deep Risk & Leverage Stratification Layer
-    confidence = "⚡ MEDIUM CONFIDENCE"
-    leverage = "2x - 3x (Conservative Mode)"
-    alert = "CONFLUENCE BALANCED: Orderbook tracking standard structural velocity."
-    live_management = "实时 ACCUMULATION: Consolidation bounds holding steady inside range."
-    
-    entry_zone = f"{round(price * 0.994, 5)} - {round(price, 5)}"
-    tp1 = round(price * 1.035, 5) if "BUY" in side else round(price * 0.965, 5)
-    tp2 = round(price * 1.070, 5) if "BUY" in side else round(price * 0.930, 5)
-    sl = round(price * 0.975, 5) if "BUY" in side else round(price * 1.025, 5)
+        # 🚨 ANTI-LATE ENTRY & LATE DUMP DETECTION LOGIC
+        if price < sma50 and current_rsi < 28:
+            # Price is down, but RSI shows it already dumped too much. Do not enter late!
+            side = "WAIT / DO NOT ENTER"
+            status = "EXHAUSTED"
+            alert = "WARNING: The dump is already completed! Selling now is extremely risky. Trend exhaustion detected."
+        
+        elif price > sma50 and current_rsi > 72:
+            # Price is up, but RSI shows it already pumped too much. Do not enter late!
+            side = "WAIT / DO NOT ENTER"
+            status = "EXHAUSTED"
+            alert = "WARNING: The pump is already completed! Buying now is dangerous. Overbought exhaustion detected."
 
-    # 10 Indicator Logic Multipliers (Pump/Dump Alert)
-    if status == "STRONG BULLISH":
-        if adx > 26 and cci > 85 and macd > sig:
-            confidence = "🔥 HIGH CONFIDENCE / ACCELERATED"
-            leverage = "5x - 10x (High Yield Margin Allocation)"
-            alert = "🚨 BIG PUMP EXPECTED: Volumetric breakthrough verified across all 10 network arrays!"
-            live_management = "🟢 HOLD LONG: Structural trend velocity is ultra-strong. Ride for maximum gains!"
-            entry_zone = f"{round(price * 0.996, 5)} - {round(price * 1.004, 5)}"
-            tp1, tp2 = round(price * 1.055, 5), round(price * 1.140, 5)
+        # Verified Trends for Safe Entries
+        elif price > sma50 and price > sma200 and (40 <= current_rsi <= 68):
+            side = "BUY LIMIT (LONG)"
+            status = "BULLISH"
+            entry_low = round(price * 0.988, 4)
+            entry_high = round(price * 0.998, 4)
+            entry_zone = f"{entry_low} - {entry_high}"
+            tp1 = round(price * 1.03, 4)
+            tp2 = round(price * 1.07, 4)
+            tp3 = round(price * 1.15, 4)
+            sl = round(entry_low * 0.95, 4)
+            alert = "STRONG CONFLUENCE: 1H, 4H & 1D trends are aligned upwards. Place orders inside the entry zone for a safe swing ride."
 
-    elif status == "STRONG BEARISH":
-        if adx > 26 and cci < -85 and macd < sig:
-            confidence = "🔥 HIGH CONFIDENCE / ACCELERATED"
-            leverage = "5x - 10x (High Yield Bear Short Allocation)"
-            alert = "🚨 SHARP DUMP RISK: Severe orderbook liquidation clusters scanned near systemic low."
-            live_management = "🔴 HOLD SHORT: High velocity downward pressure detected. Expand target execution."
-            entry_zone = f"{round(price * 0.997, 5)} - {round(price * 1.003, 5)}"
-            tp1, tp2 = round(price * 0.945, 5), round(price * 0.860, 5)
+        elif price < sma50 and price < sma200 and (32 <= current_rsi <= 60):
+            side = "SELL LIMIT (SHORT)"
+            status = "BEARISH"
+            entry_low = round(price * 1.002, 4)
+            entry_high = round(price * 1.012, 4)
+            entry_zone = f"{entry_low} - {entry_high}"
+            tp1 = round(price * 0.97, 4)
+            tp2 = round(price * 0.93, 4)
+            tp3 = round(price * 0.85, 4)
+            sl = round(entry_high * 1.05, 4)
+            alert = "STRONG CONFLUENCE: Macro and micro trends are crashing down. Perfect entry window for safe shorting."
 
-    # Emergency Invalidation Safeguard Layer
-    if (rsi > 74 and "BUY" in side) or (rsi < 26 and "SELL" in side) or (neutral_votes > buy_votes and neutral_votes > sell_votes):
-        confidence = "⚠️ HIGH RISK / UNCONFIRMED"
-        leverage = "1x - 2x (Strict Capital Mitigation Control)"
-        alert = "⚠️ DIVERGENCE WARNING: Massive high-timeframe structural friction detected."
-        live_management = "🚨 EMERGENCY EXIT: Volatility matrix invalidating setup! Cut risk or secure immediate exit!"
-
-    res_data = jsonify({
-        "coin": raw_coin, "display_name": display_name, "price": f"{price:,.5f}",
-        "signal": side, "status": status, "entry_zone": entry_zone,
-        "confidence": confidence, "leverage": "1x (Spot Architecture)" if mode == "SPOT" else leverage,
-        "tp1": f"{tp1:,.5f}", "tp2": f"{tp2:,.5f}", "sl": f"{sl:,.5f}",
-        "indicator_score": f"BUY: {buy_votes} | SELL: {sell_votes} | NEUT: {neutral_votes}",
-        "alert": alert, "live_management": live_management, "mode": mode
-    })
-    
-    res_data.headers.add("Access-Control-Allow-Origin", "*")
-    return res_data
+        return jsonify({
+            "coin": coin, "price": price, "signal": side, "status": status,
+            "entry_zone": entry_zone, "leverage": "3x - 5x (Swing Recommended)",
+            "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl,
+            "rsi": current_rsi, "macro_trend": "UPTREND" if price > sma200 else "DOWNTREND",
+            "alert": alert
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
