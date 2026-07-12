@@ -38,7 +38,6 @@
             transition: background 0.3s ease;
         }
 
-        /* Responsive Layout for both Mobile and Desktop screens uniformly */
         .phone-wrapper {
             width: 100%; max-width: 430px; height: 100vh; max-height: 920px;
             box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 10px;
@@ -58,7 +57,7 @@
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; }
         .logo-txt { font-weight: 900; font-size: 19px; color: var(--primary); letter-spacing: 0.5px; }
         
-        /* Premium iOS-style Switch Container */
+        /* Premium iOS-style Switch */
         .premium-switch {
             display: flex; align-items: center; gap: 8px; cursor: pointer;
             background: var(--panel); padding: 4px 10px; border-radius: 30px; border: 1px solid var(--border);
@@ -129,7 +128,6 @@
 
         <div class="top-bar">
             <div class="logo-txt">NEXUS AI ANALYZER</div>
-            <!-- Premium Toggle Switch -->
             <div class="premium-switch" onclick="toggleTheme()">
                 <span class="switch-label">Dark Mode</span>
                 <div class="switch-toggle"></div>
@@ -151,7 +149,7 @@
         <div class="panel" id="signalPanel">
             <div class="header-row">
                 <div style="width:100%">
-                    <div class="skeleton-text shimmer" style="width:60%; height:20px;"></div>
+                    <div class="skeleton-text shimmer" style="width:70%; height:20px;"></div>
                     <div class="skeleton-text shimmer" style="width:40%;"></div>
                 </div>
             </div>
@@ -196,6 +194,7 @@
 
         function loadTradingView(coin) {
             document.getElementById('chart').innerHTML = ""; 
+            // TradingView එකට කෙලින්ම Prefix එකක් තිබුනොත් ඒකම ගන්නවා, නැත්නම් BINANCE: දානවා
             let tvSymbol = coin.includes(":") ? coin : "BINANCE:" + coin;
             new TradingView.widget({
                 "container_id": "chart", 
@@ -211,7 +210,7 @@
 
         async function fetchSignalData() {
             try {
-                // Stripping custom prefixes for the API query
+                // API එකට යවනකොට BINANCE: වැනි දේවල් අයින් කරලා යැවීම ආරක්ෂිතයි
                 let cleanQueryCoin = currentCoin.includes(":") ? currentCoin.split(":")[1] : currentCoin;
                 const response = await fetch(`${api_base_url}?coin=${cleanQueryCoin}&mode=${currentMode}`);
                 const data = await response.json();
@@ -252,7 +251,7 @@
                     </div>
                 `;
             } catch (err) {
-                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:30px; color:var(--red);" class="fade-in">Syncing with live fallback network channels...</div>`;
+                document.getElementById('signalPanel').innerHTML = `<div style="text-align:center; padding:30px; color:var(--red);" class="fade-in">Re-syncing data streams...</div>`;
             }
         }
 
@@ -268,7 +267,7 @@
         // Init
         loadTradingView(currentCoin);
         fetchSignalData();
-        setInterval(fetchSignalData, 30000);
+        setInterval(fetchSignalData, 20000); // 20 Seconds Live Polling
     </script>
 </body>
 </html>
