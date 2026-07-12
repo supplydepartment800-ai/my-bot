@@ -1,11 +1,8 @@
 import os
 import random
 from flask import Flask, jsonify, request, make_response
-from flask_cors import CORS
 
 app = Flask(__name__)
-# ගෝලීයව CORS Allow කිරීම
-CORS(app, resources={r"/*": {"origins": "*"}})
 
 def clean_coin_name(coin):
     coin = coin.upper().strip()
@@ -13,12 +10,14 @@ def clean_coin_name(coin):
     if "." in coin: coin = coin.split(".")[0]
     return coin.replace('USDT', '').replace('1000', '').replace('-', '')
 
-# හැම Response එකකටම CORS Headers බලෙන්ම ඇමුණුම සඳහා
+# CORS Headers සෘජුවම හැම Response එකකටම එකතු කිරීම
 @app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+def add_cors_headers(response):
+    response.headers.update({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+    })
     return response
 
 @app.route('/analyze')
@@ -81,7 +80,6 @@ def analyze_coin():
 
 @app.route('/top-signals')
 def top_signals():
-    """Future Coins සඳහා පමණක් 100% ආරක්ෂිතව දත්ත එවීමට සකස් කළ කොටස"""
     future_coins = ["BTC", "ETH", "SOL", "LINK", "AVAX", "XRP", "ADA", "DOT"]
     selected_coins = random.sample(future_coins, 4)
     signals_list = []
@@ -99,9 +97,7 @@ def top_signals():
             "sl": f"{(entry * 0.98 if type_choice == 'LONG 🚀' else entry * 1.02):,.4f}"
         })
     
-    # JSON Response එක සෘජුවම සාදා Headers ඇතුළත් කිරීම
-    res = jsonify({"signals": signals_list})
-    return res
+    return jsonify({"signals": signals_list})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
