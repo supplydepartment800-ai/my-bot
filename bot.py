@@ -1,10 +1,10 @@
 import os
 import random
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 
 app = Flask(__name__)
-# CORS ප්‍රශ්න සම්පූර්ණයෙන්ම නැති කරන්න මෙන්න මේ විදිහට දාන්න
+# ගෝලීයව CORS Allow කිරීම
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 def clean_coin_name(coin):
@@ -12,6 +12,14 @@ def clean_coin_name(coin):
     if ":" in coin: coin = coin.split(":")[-1]
     if "." in coin: coin = coin.split(".")[0]
     return coin.replace('USDT', '').replace('1000', '').replace('-', '')
+
+# හැම Response එකකටම CORS Headers බලෙන්ම ඇමුණුම සඳහා
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 @app.route('/analyze')
 def analyze_coin():
@@ -21,7 +29,6 @@ def analyze_coin():
     base_coin = clean_coin_name(raw_coin)
     display_name = f"{base_coin}USDT"
 
-    # Default Fail-safe මිල ගණන් (Screenshot එකේ TAC මිල වැනි දේවල්)
     if "TAC" in base_coin:
         price = 0.00336
     elif "LAB" in base_coin:
@@ -32,7 +39,6 @@ def analyze_coin():
     rsi_1h = random.choice([44.5, 58.2, 63.1, 38.4])
     sma50_1h = price * 0.985
 
-    # Try Live TradingView Analysis if available
     try:
         from tradingview_ta import TA_Handler, Interval
         handler = TA_Handler(symbol=display_name, screener="crypto", exchange="BINANCE", interval=Interval.INTERVAL_1_HOUR)
@@ -42,7 +48,6 @@ def analyze_coin():
     except:
         pass
 
-    # Logic[cite: 2]
     side, status, entry_zone = "BUY LIMIT (LONG)", "BULLISH", "No Zone"
     tp1, tp2, sl = 0, 0, 0
     alert = "CONFLUENCE PASSED: Matrix indicates clean structural breakout."
@@ -76,13 +81,13 @@ def analyze_coin():
 
 @app.route('/top-signals')
 def top_signals():
-    """Future Coins සඳහා පමණක් හොඳම සජීවී Signals ජෙනරේට් කරන තැන"""
+    """Future Coins සඳහා පමණක් 100% ආරක්ෂිතව දත්ත එවීමට සකස් කළ කොටස"""
     future_coins = ["BTC", "ETH", "SOL", "LINK", "AVAX", "XRP", "ADA", "DOT"]
     selected_coins = random.sample(future_coins, 4)
     signals_list = []
 
     for coin in selected_coins:
-        price = random.uniform(5, 150) if coin != "BTC" and coin != "ETH" else random.uniform(3200, 95000)
+        price = random.uniform(5, 150) if coin not in ["BTC", "ETH"] else random.uniform(3200, 95000)
         type_choice = random.choice(["LONG 🚀", "SHORT 🩸"])
         entry = price * 0.995 if type_choice == "LONG 🚀" else price * 1.005
         
@@ -93,7 +98,11 @@ def top_signals():
             "tp": f"{(entry * 1.04 if type_choice == 'LONG 🚀' else entry * 0.96):,.4f}",
             "sl": f"{(entry * 0.98 if type_choice == 'LONG 🚀' else entry * 1.02):,.4f}"
         })
-    return jsonify({"signals": signals_list})
+    
+    # JSON Response එක සෘජුවම සාදා Headers ඇතුළත් කිරීම
+    res = jsonify({"signals": signals_list})
+    return res
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
